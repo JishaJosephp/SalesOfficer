@@ -117,7 +117,7 @@ export default class PlannedDealerView extends React.Component<IPlannedDealerVie
     let planneddate= moment(items[0].PlannedDate).format("YYYY-MM-DD"); 
     if(planneddate == currentDate)
     {
-      let conf = confirm("Are you sure to checkin this dealer?");
+      let conf = confirm("Are you sure to move checkin page?");
       if (conf == true) {
 if(items[0].Checkin=="1")
       window.location.href="https://mrbutlers.sharepoint.com/sites/SalesOfficerApplication/SitePages/Checkin-Checkout.aspx?dealerId="+items[0].DealerNameId+"&RouteId="+items[0].Id+"&checkin="+items[0].Checkin;
