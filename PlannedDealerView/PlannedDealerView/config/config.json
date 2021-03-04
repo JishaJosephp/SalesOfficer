@@ -1,0 +1,19 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/spfx-build/config.2.0.schema.json",
+  "version": "2.0",
+  "bundles": {
+    "planned-dealer-view-web-part": {
+      "components": [
+        {
+          "entrypoint": "./lib/webparts/plannedDealerView/PlannedDealerViewWebPart.js",
+          "manifest": "./src/webparts/plannedDealerView/PlannedDealerViewWebPart.manifest.json"
+        }
+      ]
+    }
+  },
+  "externals": {},
+  "localizedResources": {
+    "PlannedDealerViewWebPartStrings": "lib/webparts/plannedDealerView/loc/{locale}.js",
+    "ControlStrings": "node_modules/@pnp/spfx-controls-react/lib/loc/{locale}.js"
+  }
+}
