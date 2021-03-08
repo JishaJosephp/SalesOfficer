@@ -228,8 +228,8 @@ export default class CaptureOrderRequisition extends React.Component<ICaptureOrd
         Remarks: this.state.remarks,
         RouteId: this.state.routeid,
         DealerId: this.state.dealerid
-      }).then(i => {
-        console.log(i);
+      });//.then(i => {
+      //   console.log(i);
         this.addOrder[this.state.orderindex.index] = ({
           Title: this.state.requiredquantity,
           ProductNameId: this.state.productname,
@@ -262,12 +262,35 @@ export default class CaptureOrderRequisition extends React.Component<ICaptureOrd
 
 
         //  window.location.href = "https://mrbutlers.sharepoint.com/sites/SalesOfficerApplication/SitePages/Checkin-Checkout.aspx";
-      })
+     // })
 
 
     }
+    console.log("before clear");
+    console.log(this.addOrder);
+    this.setState({
 
+      productname: "",
+      requiredquantity: "",
+      requireddate: null,
+      remarks: "",
+      noDataError:'',
+      quantityError:'',   
+      orderindex:null
 
+        });
+        this.setState({
+            orderindex: {
+                Id: null,
+                index: null
+            }
+        });
+
+        console.log("after clear");
+        console.log(this.addOrder);
+        // this.setState({
+        //   orderdatalist: this.addOrder,
+        // });
     //  this.setState({
 
     //     productname: "",
