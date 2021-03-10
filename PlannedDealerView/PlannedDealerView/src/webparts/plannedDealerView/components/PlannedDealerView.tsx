@@ -12,6 +12,7 @@ import GridListTileBar from '@material-ui/core/GridListTileBar';
 import ListSubheader from '@material-ui/core/ListSubheader';
 import { colors } from '@material-ui/core';
 import { confirmAlert } from 'react-confirm-alert'; // Import
+
 import 'react-confirm-alert/src/react-confirm-alert.css'
 import {
   DatePicker,
@@ -131,14 +132,33 @@ if(checkinData.length == 0)
       + items[0].DealerNameId + "</Value></Eq></And></Where></Query></View>",
   });
   console.log(plannedData);
-  if (planneddate == currentDate) {
-    if (plannedData.length == 1) {
+  if (planneddate == currentDate)
+   {
+    if (plannedData.length >= 1) {
       if (items[0].Checkin == "1"){
-      let conf = confirm("Are you sure to move checkin page ?");
-      if (conf == true) {
+        for (let i = 0; i < plannedData.length; i++) {
+          if(items[0].Id==plannedData[i].ID)
+          {
+            const checkinData = await sp.web.lists.getByTitle("CheckIn CheckOut").getItemsByCAMLQuery({
+              ViewXml: "<View><Query><Where><And><Eq><FieldRef Name='UserName' /><Value Type='Person or Group'>"
+                + this.state.user + "</Value></Eq><Eq><FieldRef Name='LogType' /> <Value Type='Choice'>Check In</Value></Eq></And></Where></Query></View>",
+            });
+            console.log(checkinData);
+            if (checkinData.length == 0) {
+              let conf = confirm("Are you sure to move checkin page ?");
+              if (conf == true) {
+              
+                  window.location.href = "https://mrbutlers.sharepoint.com/sites/SalesOfficerApplication/SitePages/Checkin-Checkout.aspx?dealerId=" + items[0].DealerNameId + "&RouteId=" + items[0].Id + "&checkin=" + items[0].Checkin;
+              }
+            }
+    else{
+      alert("You are already checked into one dealer at this time. Try again after check out");
+    } 
+          }
+        }
+        //nithya
       
-          window.location.href = "https://mrbutlers.sharepoint.com/sites/SalesOfficerApplication/SitePages/Checkin-Checkout.aspx?dealerId=" + items[0].DealerNameId + "&RouteId=" + items[0].Id + "&checkin=" + items[0].Checkin;
-      }
+//nithya
     }
     else  if (items[0].Checkin == "0")
     {
@@ -173,6 +193,9 @@ else{
   };
   public searchData = async () => {
 
+  }
+  public async cancel() {
+    window.location.href = window.location.href = "https://mrbutlers.sharepoint.com/sites/SalesOfficerApplication/SitePages/Sales-Officer.aspx";
   }
   public async getDetails() {
 
@@ -288,6 +311,10 @@ else{
             groupByFields={groupByFields}
             viewFields={viewFields}
           />
+          <DialogFooter>
+          <PrimaryButton id="Cancel"  style={{ width: "150px"}} text="Go to Home" onClick={this.cancel} />
+          </DialogFooter>
+         
           {/* <table className={styles.table2} id="plannedDealer" >
 <tr>
 
