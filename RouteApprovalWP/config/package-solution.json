@@ -1,0 +1,13 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/spfx-build/package-solution.schema.json",
+  "solution": {
+    "name": "route-approval-wp-client-side-solution",
+    "id": "74d5b1be-7a98-4e34-a052-af5e204e316f",
+    "version": "1.0.0.0",
+    "includeClientSideAssets": true,
+    "isDomainIsolated": false
+  },
+  "paths": {
+    "zippedPackage": "solution/route-approval-wp.sppkg"
+  }
+}

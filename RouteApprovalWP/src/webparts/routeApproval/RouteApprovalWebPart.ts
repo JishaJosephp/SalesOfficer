@@ -1,34 +1,25 @@
 import * as React from 'react';
 import * as ReactDom from 'react-dom';
 import { Version } from '@microsoft/sp-core-library';
-import "@pnp/sp/sites";
 import {
   IPropertyPaneConfiguration,
   PropertyPaneTextField
 } from '@microsoft/sp-property-pane';
 import { BaseClientSideWebPart } from '@microsoft/sp-webpart-base';
-import { sp } from "@pnp/sp/presets/all";
-import * as strings from 'CaptureOrderRequisitionWebPartStrings';
-import CaptureOrderRequisition from './components/CaptureOrderRequisition';
-import { ICaptureOrderRequisitionProps } from './components/ICaptureOrderRequisitionProps';
 
-export interface ICaptureOrderRequisitionWebPartProps {
+import * as strings from 'RouteApprovalWebPartStrings';
+import RouteApproval from './components/RouteApproval';
+import { IRouteApprovalProps } from './components/IRouteApprovalProps';
+
+export interface IRouteApprovalWebPartProps {
   description: string;
 }
 
-export default class CaptureOrderRequisitionWebPart extends BaseClientSideWebPart<ICaptureOrderRequisitionWebPartProps> {
-  protected onInit(): Promise<void> {
-    return super.onInit().then((_) => {
-      // other init code may be present
-   
-      sp.setup({
-        spfxContext: this.context,
-      });
-    });
-   }
+export default class RouteApprovalWebPart extends BaseClientSideWebPart <IRouteApprovalWebPartProps> {
+
   public render(): void {
-    const element: React.ReactElement<ICaptureOrderRequisitionProps> = React.createElement(
-      CaptureOrderRequisition,
+    const element: React.ReactElement<IRouteApprovalProps> = React.createElement(
+      RouteApproval,
       {
         description: this.properties.description
       }
