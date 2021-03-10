@@ -539,11 +539,11 @@ let reqDate=this.state.requireddate;
           <table style={{ border: '1px solid #ddd', display: (this.state.orderdatalist.length == 0 ? 'none' : 'block'), width: '100%', borderCollapse: 'collapse', backgroundColor: '#f2f2f2' }}>
 
             <tr style={{ backgroundColor: '#f2f2f2' }}>
-              <th style={{ border: '1px solid #ddd', padding: '8px', borderCollapse: 'collapse' }}>Product Name</th>
-              <th style={{ border: '1px solid #ddd', padding: '8px', borderCollapse: 'collapse' }}>Qty</th>
-              <th style={{ border: '1px solid #ddd', padding: '8px', borderCollapse: 'collapse' }}>Required date</th>
-              <th  style={{padding: '8px' }}></th>
-              <th  style={{ padding: '8px' }}></th>
+              <th style={{ border: '1px solid #ddd', padding: '4px', borderCollapse: 'collapse' }}>Product Name</th>
+              <th style={{ border: '1px solid #ddd', padding: '4px', borderCollapse: 'collapse' }}>Qty</th>
+              <th style={{ border: '1px solid #ddd', padding: '4px', borderCollapse: 'collapse' }}>Required date</th>
+              <th  style={{padding: '4px' }}></th>
+              <th  style={{ padding: '4px' }}></th>
               {/* <th style={{ border: '1px solid #ddd', padding: '8px', borderCollapse: 'collapse' }}>Assigned</th>
    */}
 
@@ -559,14 +559,14 @@ let reqDate=this.state.requireddate;
 
                   return <tr style={{ backgroundColor: '#f2f2f2' }}>
 
-                    <td style={{ border: '1px solid #ddd', padding: '8px', borderCollapse: 'collapse' }}>{item.Product}</td>
-                    <td style={{ border: '1px solid #ddd', padding: '8px', borderCollapse: 'collapse' }}>{item.Title}</td>
-                    <td style={{ border: '1px solid #ddd', padding: '8px', borderCollapse: 'collapse' }}>{item.RequiredDate}</td>
+                    <td style={{ border: '1px solid #ddd', padding: '4px', borderCollapse: 'collapse' }}>{item.Product}</td>
+                    <td style={{ border: '1px solid #ddd', padding: '4px', borderCollapse: 'collapse' }}>{item.Title}</td>
+                    <td style={{ border: '1px solid #ddd', padding: '4px', borderCollapse: 'collapse' }}>{item.RequiredDate}</td>
                     {/* <td style={{ border: '1px solid #ddd', padding: '8px', borderCollapse: 'collapse' }}>{item.ViewAssign}</td> */}
 
-                    <td style={{ padding: '8px' }}> <IconButton iconProps={EditIcon} title="Edit" ariaLabel="Edit" onClick={() => this.EditOrderdatalist(item)} /></td>
+                    <td style={{ padding: '4px' }}> <IconButton iconProps={EditIcon} title="Edit" ariaLabel="Edit" onClick={() => this.EditOrderdatalist(item)} /></td>
 
-                    <td style={{  padding: '8px' }}> <IconButton iconProps={DeleteIcon} title="Delete" ariaLabel="Delete" onClick={() => this.DeleteOrderdatalist(item)} /></td>
+                    <td style={{  padding: '4px' }}> <IconButton iconProps={DeleteIcon} title="Delete" ariaLabel="Delete" onClick={() => this.DeleteOrderdatalist(item)} /></td>
 
 
 
