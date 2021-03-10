@@ -540,8 +540,10 @@ let reqDate=this.state.requireddate;
 
             <tr style={{ backgroundColor: '#f2f2f2' }}>
               <th style={{ border: '1px solid #ddd', padding: '8px', borderCollapse: 'collapse' }}>Product Name</th>
-              <th style={{ border: '1px solid #ddd', padding: '8px', borderCollapse: 'collapse' }}>Quantity</th>
+              <th style={{ border: '1px solid #ddd', padding: '8px', borderCollapse: 'collapse' }}>Qty</th>
               <th style={{ border: '1px solid #ddd', padding: '8px', borderCollapse: 'collapse' }}>Required date</th>
+              <th  style={{padding: '8px' }}></th>
+              <th  style={{ padding: '8px' }}></th>
               {/* <th style={{ border: '1px solid #ddd', padding: '8px', borderCollapse: 'collapse' }}>Assigned</th>
    */}
 
@@ -564,7 +566,7 @@ let reqDate=this.state.requireddate;
 
                     <td style={{ padding: '8px' }}> <IconButton iconProps={EditIcon} title="Edit" ariaLabel="Edit" onClick={() => this.EditOrderdatalist(item)} /></td>
 
-                    <td style={{ padding: '8px' }}> <IconButton iconProps={DeleteIcon} title="Delete" ariaLabel="Delete" onClick={() => this.DeleteOrderdatalist(item)} /></td>
+                    <td style={{  padding: '8px' }}> <IconButton iconProps={DeleteIcon} title="Delete" ariaLabel="Delete" onClick={() => this.DeleteOrderdatalist(item)} /></td>
 
 
 
