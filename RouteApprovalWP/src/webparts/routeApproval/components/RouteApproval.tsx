@@ -86,8 +86,6 @@ export default class RouteApproval extends React.Component<IRouteApprovalProps,I
       { key: '45', text: '45' },
       { key: '50', text: '50' },
       { key: '55', text: '55' },
-
-
   ];
   const dropdownStyles: Partial<IDropdownStyles> = {
       dropdown: { width: 100 },
