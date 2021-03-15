@@ -1,0 +1,22 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/spfx-build/config.2.0.schema.json",
+  "version": "2.0",
+  "bundles": {
+    "plot-locations-web-part": {
+      "components": [
+        {
+          "entrypoint": "./lib/webparts/plotLocations/PlotLocationsWebPart.js",
+          "manifest": "./src/webparts/plotLocations/PlotLocationsWebPart.manifest.json"
+        }
+      ]
+    }
+  },
+  "externals": {
+   
+  },
+ 
+  "localizedResources": {
+    "PlotLocationsWebPartStrings": "lib/webparts/plotLocations/loc/{locale}.js",
+    "ControlStrings": "node_modules/@pnp/spfx-controls-react/lib/loc/{locale}.js"
+  }
+}
