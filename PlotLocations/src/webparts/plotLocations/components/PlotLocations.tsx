@@ -312,8 +312,6 @@ export default class PlotLocations extends React.Component<IPlotLocationsProps,I
 
           <br></br>
 
-        
-  
 
           <PrimaryButton text="Get Route"  onClick={this.searchData} className={styles.buttonStyle} />
 
@@ -325,8 +323,6 @@ export default class PlotLocations extends React.Component<IPlotLocationsProps,I
 
 
           <br></br>
-
-
 
           <br></br>
 
