@@ -280,19 +280,15 @@ export default class PlotLocations extends React.Component<IPlotLocationsProps,I
         <table>
           <tr>
             
-           
             <Dropdown
             placeholder="Select Sales/Service Team"
             options={this.state.officerOptions}
             onChanged={this.officerChanged}
             style={{ width: '205px', display:( this.state.userGlobal== 1 ? '':'none')}} 
-          
             
           />
           </tr>
           <br></br>
-            
-      
               <tr>
 
               <DatePicker id="selectdate" 
