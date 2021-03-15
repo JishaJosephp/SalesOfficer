@@ -1,0 +1,18 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/spfx-build/config.2.0.schema.json",
+  "version": "2.0",
+  "bundles": {
+    "balance-stock-web-part": {
+      "components": [
+        {
+          "entrypoint": "./lib/webparts/balanceStock/BalanceStockWebPart.js",
+          "manifest": "./src/webparts/balanceStock/BalanceStockWebPart.manifest.json"
+        }
+      ]
+    }
+  },
+  "externals": {},
+  "localizedResources": {
+    "BalanceStockWebPartStrings": "lib/webparts/balanceStock/loc/{locale}.js"
+  }
+}
