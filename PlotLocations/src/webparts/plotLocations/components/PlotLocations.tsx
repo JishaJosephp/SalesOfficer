@@ -8,11 +8,14 @@ import 'bingmaps';
 import {
   Dropdown,
   DatePicker,
-  TextField,
   DialogFooter,
   PrimaryButton
 
 } from "office-ui-fabric-react";
+
+import TextField from '@material-ui/core/TextField';
+import Autocomplete, { createFilterOptions } from '@material-ui/lab/Autocomplete';
+
 import * as moment from "moment";
 
 
@@ -25,6 +28,7 @@ export interface IPlotLocationsState {
   officerKey         : any;
   userGlobal         : any;
   selectedDate       : any;
+  officerOption      : any;
   officerOptions     : any;
   officerSelected?   : { key: string | number | undefined };
   locationCoordinates: any[];
@@ -47,6 +51,7 @@ export default class PlotLocations extends React.Component<IPlotLocationsProps,I
       officerKey          : "",
       userGlobal          : '',
       selectedDate        : '',
+      officerOption       : [],
       officerOptions      : [],
       officerSelected     : undefined,
       locationCoordinates :[]
@@ -111,7 +116,9 @@ export default class PlotLocations extends React.Component<IPlotLocationsProps,I
     console.log(userName); 
 
     let optionUser = [];
+    let opt=[];
     for (let i = 0; i < userName.length; i++) {
+      opt.push({ "title": userName[i].Title,"Id":  userName[i].Id});
   
         let userdata = {
             key: userName[i].Id,
@@ -122,9 +129,12 @@ export default class PlotLocations extends React.Component<IPlotLocationsProps,I
     }
 
     this.setState({
-      officerOptions: optionUser
+      officerOptions: optionUser,
+      officerOption: opt
     });
-    //console.log(optionUser); 
+    console.log(optionUser); 
+    console.log(opt);
+    
 
   }
 
@@ -147,6 +157,8 @@ export default class PlotLocations extends React.Component<IPlotLocationsProps,I
 
     let cooSplit;
     var count;
+    let dealerName;
+    let infoDescription;
 
     // let today           = new Date();
     // let currentDate     = moment(today).format("YYYY-MM-DDT12:00:00Z");
@@ -155,12 +167,11 @@ export default class PlotLocations extends React.Component<IPlotLocationsProps,I
     let formattedDate     = moment(this.state.selectedDate).format("YYYY-MM-DDT12:00:00Z");
 
 
-    console.log(formattedDate);
+    //console.log(formattedDate);
 
     if(this.state.userGlobal == 1)
     {
 
-       
     //Get selected sales officers route data correspoinding to Today's date
     const search = await sp.web.lists.getByTitle("Route List").getItemsByCAMLQuery({
       ViewXml: "<View><Query><Where><And><Eq><FieldRef Name='PlannedDateTime' /><Value Type='DateTime'>" 
@@ -170,16 +181,37 @@ export default class PlotLocations extends React.Component<IPlotLocationsProps,I
 
   console.log(search);
 
-  //Get selected Sales officers location details from list
+  //Get selected Sales officers location details and dealer details from list
   for(let i = 0; i < search.length; i++)
   {
     
     const item: any = await sp.web.lists.getByTitle("Location").items.getById(search[i].LocationsId).get();
     cooSplit = item.Coordinates.split(',');
     count    =i+1+"";
-    
+
+    const dealer: any = await sp.web.lists.getByTitle("Dealer List").items.getById(search[i].DealerNameId).get();
+    dealerName=dealer.Title;
+
+    if(search[i].Status == null  || search[i].Status == undefined)
+    {
+
     //Change details to acceptable array format
-  locationDetails[i]={ "location":cooSplit, "option":{ color: 'red',text: count , description: item.Title }}
+    locationDetails[i]={ "location":cooSplit,  "addHandler":"mouseover", "infoboxOption": { title: dealerName, description: search[i].PlanTime }, "pushPinOption":{color:"red",text: count , description: item.Title }}
+  
+    }
+  
+    else{
+  
+    
+      infoDescription=search[i].PlanTime+"<br/>"+search[i].Status;
+
+     //Change details to acceptable array format
+      locationDetails[i]={ "location":cooSplit,  "addHandler":"mouseover", "infoboxOption": { title: dealerName, description: infoDescription }, "pushPinOption":{ color:"red",text: count , description: item.Title }}
+  
+    }
+    
+   
+    //locationDetails[i]={ "location":cooSplit, "option":{ color: 'red',text: count , description: item.Title }}
 
   }
 
@@ -209,7 +241,7 @@ export default class PlotLocations extends React.Component<IPlotLocationsProps,I
     else if(this.state.userGlobal == 0)
     {
 
-       //Get selected sales officers route data correspoinding to Today's date
+       //Get logged in sales officers route data correspoinding to Today's date
     const search = await sp.web.lists.getByTitle("Route List").getItemsByCAMLQuery({
       ViewXml: "<View><Query><Where><And><Eq><FieldRef Name='PlannedDateTime' /><Value Type='DateTime'>" 
       + formattedDate + "</Value></Eq> <Eq><FieldRef Name='Assign' /><Value Type='Person or Group'>"
@@ -218,15 +250,42 @@ export default class PlotLocations extends React.Component<IPlotLocationsProps,I
 
   console.log(search);
 
+  //Get location details and dealer details from list
   for(let i = 0; i < search.length; i++)
   {
     
     const item: any = await sp.web.lists.getByTitle("Location").items.getById(search[i].LocationsId).get();
     cooSplit = item.Coordinates.split(',');
     count    =i+1+"";
+   
+    const dealer: any = await sp.web.lists.getByTitle("Dealer List").items.getById(search[i].DealerNameId).get();
+    dealerName=dealer.Title;
     
+    
+    
+  //locationDetails[i]={ "location":cooSplit, "option":{ color: 'red',text: count , description: item.Title }}
+
+  if(search[i].Status == null || search[i].Status == undefined)
+  {
+
     //Change details to acceptable array format
-  locationDetails[i]={ "location":cooSplit, "option":{ color: 'red',text: count , description: item.Title }}
+
+  locationDetails[i]={ "location":cooSplit,  "addHandler":"mouseover", "infoboxOption": { title: dealerName, description: search[i].PlanTime }, "pushPinOption":{ color:"red",text: count , description: item.Title }}
+
+  }
+
+  else{
+
+    infoDescription="Time: "+search[i].PlanTime+"<br/>"+search[i].Status;
+    
+
+    //Change details to acceptable array format
+
+    locationDetails[i]={ "location":cooSplit,  "addHandler":"mouseover", "infoboxOption": { title: dealerName, description: infoDescription }, "pushPinOption":{ color:"red",text: count , description: item.Title }}
+
+
+  }
+
 
   }
 
@@ -251,9 +310,6 @@ export default class PlotLocations extends React.Component<IPlotLocationsProps,I
     
   }
 
-
-
-
     }
    
   
@@ -273,22 +329,43 @@ export default class PlotLocations extends React.Component<IPlotLocationsProps,I
   }
 
   public render(): React.ReactElement<IPlotLocationsProps> {
+
+ const filterOptions = createFilterOptions({
+  matchFrom: 'start'
+
+});
+ 
       
     return (
       <div>
 
+
+<Autocomplete
+      id="combo-box-demo"
+      options={this.state.officerOption.map((option) => option.title)}
+      filterOptions={filterOptions}
+      //getOptionLabel={(option) => option.title}
+      style={{ width: 300 }}
+      renderInput={(params) => <TextField {...params} label="Sales Team" variant="outlined" />}
+    />
+
+
         <table>
           <tr>
             
+           
             <Dropdown
             placeholder="Select Sales/Service Team"
             options={this.state.officerOptions}
             onChanged={this.officerChanged}
             style={{ width: '205px', display:( this.state.userGlobal== 1 ? '':'none')}} 
+          
             
           />
           </tr>
           <br></br>
+            
+      
               <tr>
 
               <DatePicker id="selectdate" 
@@ -308,6 +385,8 @@ export default class PlotLocations extends React.Component<IPlotLocationsProps,I
 
           <br></br>
 
+        
+  
 
           <PrimaryButton text="Get Route"  onClick={this.searchData} className={styles.buttonStyle} />
 
@@ -320,6 +399,8 @@ export default class PlotLocations extends React.Component<IPlotLocationsProps,I
 
           <br></br>
 
+
+
           <br></br>
 
             <div className={styles.contains}>
@@ -330,8 +411,9 @@ export default class PlotLocations extends React.Component<IPlotLocationsProps,I
             mapTypeId = {"road"}
             navigationBarMode = {"compact"}
             supportedMapTypes = {["road","canvasDark"]}
-            zoom = {10}
-            pushPins = {this.state.locationCoordinates}
+            zoom = {11}
+            infoboxesWithPushPins = {this.state.locationCoordinates}
+        
             >
             </ReactBingmaps>
 
