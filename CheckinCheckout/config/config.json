@@ -1,0 +1,18 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/spfx-build/config.2.0.schema.json",
+  "version": "2.0",
+  "bundles": {
+    "checkin-checkout-web-part": {
+      "components": [
+        {
+          "entrypoint": "./lib/webparts/checkinCheckout/CheckinCheckoutWebPart.js",
+          "manifest": "./src/webparts/checkinCheckout/CheckinCheckoutWebPart.manifest.json"
+        }
+      ]
+    }
+  },
+  "externals": {},
+  "localizedResources": {
+    "CheckinCheckoutWebPartStrings": "lib/webparts/checkinCheckout/loc/{locale}.js"
+  }
+}
