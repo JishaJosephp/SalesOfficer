@@ -54,7 +54,14 @@ export interface IOrderindex {
 
 
 }
+export interface ICaptureOrderData{
+  productname: any;
+  requiredquantity: any;
+  requireddate: any;
+  productid:any;
+}
 export interface ICaptureOrderRequisitionState {
+  CaptureOrderData:ICaptureOrderData[];
   Title: any;
   firstDayOfWeek?: DayOfWeek;
   productname: any;
@@ -83,16 +90,19 @@ export default class CaptureOrderRequisition extends React.Component<ICaptureOrd
       requireddate: null,
       remarks: "",
       noDataError: '',
-      quantityError: '', orderdatalist: [],
+      quantityError: '', 
+      orderdatalist: [],
       routeid: "",
       dealerid: "",
       orderindex: null,
-      Product: ""
+      Product: "",
+      CaptureOrderData:[]
 
     };
     this.productChanged = this.productChanged.bind(this);
     this.cancel = this.cancel.bind(this);
   }
+  private captureOrderData: ICaptureOrderData[] = [];
   private addOrder = [];
   private isAdd = "1";
   public async componentDidMount() {
@@ -100,7 +110,13 @@ export default class CaptureOrderRequisition extends React.Component<ICaptureOrd
     const productitems: any[] = await sp.web.lists.getByTitle("Product").items.select("Title,ID").getAll();
     //console.log("district" + districtitems);
     for (let i = 0; i < productitems.length; i++) {
+      this.captureOrderData[i] = ({
+        productname: productitems[i].Title,
+        productid:  productitems[i].Id,
+        requiredquantity: "",
+        requireddate: ""
 
+      });
       let data = {
         key: productitems[i].Id,
         text: productitems[i].Title
@@ -485,9 +501,7 @@ let reqDate=this.state.requireddate;
     });
   }
   public async cancel() {
-
-
-    window.location.href = window.location.href = "https://mrbutlers.sharepoint.com/sites/SalesOfficerApplication/SitePages/Checkin-Checkout.aspx?dealerId=" + this.state.dealerid + "&RouteId=" + this.state.routeid + "&checkin=1";;
+ window.location.href = window.location.href = "https://mrbutlers.sharepoint.com/sites/SalesOfficerApplication/SitePages/Checkin-Checkout.aspx?dealerId=" + this.state.dealerid + "&RouteId=" + this.state.routeid + "&checkin=1";;
   }
 
   public render(): React.ReactElement<ICaptureOrderRequisitionProps> {
@@ -497,98 +511,155 @@ let reqDate=this.state.requireddate;
     const UpdateIcon: IIconProps = { iconName: 'Add' };
 
     return (
-      <div className={styles.orderDiv}>
+      <div>
+        <table >
+                    <thead>
+                        <th style={{ width: '200px', textAlign: 'left' }}>Workflow Levels</th>
+                        <th style={{ width: '200px', textAlign: 'left' }}>Progress Planned(%)</th>
+                        <th style={{ width: '200px', textAlign: 'left' }}>Planned Date</th>
+                        <th style={{ width: '5px' }}></th>
+                        <th style={{ width: '200px', textAlign: 'left' }}>Forecast Date</th>
+                        <th style={{ width: '5px', textAlign: 'left' }}></th>
+                        <th style={{ width: '200px', textAlign: 'left' }}>Actual Date</th>
+                    </thead>
+                    <tbody>
+                        {
 
-        <h2 className={styles.heading}>Capture Order</h2>
+                            this.state.Workflowdata.map((item, i) => {
+                                return <tr style={{ height: '88px' }}>
+                                    <td>
+                                        {this.state.Workflowdata[i].Levels}
 
-        <Label >Product Name</Label>  <Dropdown id="dept"
-          placeholder="Select an option"
-          selectedKey={this.state.productname}
-          options={this.state.productoption}
-          onChanged={this.productChanged}
+                                    </td>
 
-        //onChange={this.deptChanged}
-        />
-        <p><Label >Required Quantity </Label>
-          < TextField value={this.state.requiredquantity} onChange={this._onrequiredquantitychange} errorMessage={this.state.quantityError} >
-          </TextField></p>
+                                    <td>
+                                        <TextField
+                                            onChange={(e) => this.progressplannedchange(e, i)}
+                                            onGetErrorMessage={(e) => this.validate(e, i)}
 
-        <Label>Required Date</Label>
+                                            defaultValue={this.state.Workflowdata[i].Percentage}
 
-        <DatePicker //style={{ width: '1000px' }}
-          //className={controlClass.control}
-          firstDayOfWeek={firstDayOfWeek}
-          strings={DayPickerStrings}
-          value={this.state.requireddate}
-          onSelectDate={this._onrequireddateChange}
-          placeholder="Select a date..."
-          ariaLabel="Select a date"
-          isRequired={true}
-        
-          formatDate={(date) => moment(date).format('DD/MM/YYYY')}
+                                        ></TextField>
+                                    </td>
+                                    <td>
+                                        <DatePicker
 
-        />
+                                            onSelectDate={(e) => this._onSelectPlannedDate(e, i)}
+                                            placeholder="Select a date..."
+                                            ariaLabel="Select a date"
 
-        <p><Label >Remarks</Label>
-          < TextField value={this.state.remarks} onChange={this.remarkschange} multiline  ></TextField></p>
+                                            value={this.state.Workflowdata[i].Planneddate}
 
-        <p style={{ color: "rgb(164, 38, 44)" }}>{this.state.noDataError}</p>
-        <td> <PrimaryButton id="Add" text="Add" onClick={this.Add} style={{ width: "100px",marginLeft:"1px",marginBottom:"5px", display: (this.isAdd == "1" ? 'block' : 'none') }} /></td>
-        <td><PrimaryButton id="Update" text="Update" onClick={this.update} style={{ width: "100px",marginLeft:"1px",marginBottom:"5px", display: (this.isAdd == "0" ? 'block' : 'none') }} /></td>
-        <div id="orderview">
-          <table style={{ border: '1px solid #ddd', display: (this.state.orderdatalist.length == 0 ? 'none' : 'block'), width: '100%', borderCollapse: 'collapse', backgroundColor: '#f2f2f2' }}>
-
-            <tr style={{ backgroundColor: '#f2f2f2' }}>
-              <th style={{ border: '1px solid #ddd', padding: '4px', borderCollapse: 'collapse' }}>Product Name</th>
-              <th style={{ border: '1px solid #ddd', padding: '4px', borderCollapse: 'collapse' }}>Qty</th>
-              <th style={{ border: '1px solid #ddd', padding: '4px', borderCollapse: 'collapse' }}>Required date</th>
-              <th  style={{padding: '4px' }}></th>
-              <th  style={{ padding: '4px' }}></th>
-              {/* <th style={{ border: '1px solid #ddd', padding: '8px', borderCollapse: 'collapse' }}>Assigned</th>
-   */}
+                                        />
 
 
+                                    </td>
+                                    <td>
 
-            </tr>
-
-
-            <tbody style={{ width: '100%', borderCollapse: 'collapse' }}>
-              {
-                this.state.orderdatalist.map((item) => {
+                                        <IconButton iconProps={emojiIcon} title="Cancel" ariaLabel="Cancel" onClick={(e) => this._onSelect(this.state.Workflowdata[i].Planneddate, i)} />
 
 
-                  return <tr style={{ backgroundColor: '#f2f2f2' }}>
+                                    </td>
+                                    <td>
+                                        <DatePicker
 
-                    <td style={{ border: '1px solid #ddd', padding: '4px', borderCollapse: 'collapse' }}>{item.Product}</td>
-                    <td style={{ border: '1px solid #ddd', padding: '4px', borderCollapse: 'collapse' }}>{item.Title}</td>
-                    <td style={{ border: '1px solid #ddd', padding: '4px', borderCollapse: 'collapse' }}>{item.RequiredDate}</td>
-                    {/* <td style={{ border: '1px solid #ddd', padding: '8px', borderCollapse: 'collapse' }}>{item.ViewAssign}</td> */}
+                                            onSelectDate={(e) => this._onSelectForecastDate(e, i)}
+                                            placeholder="Select a date..."
+                                            ariaLabel="Select a date"
 
-                    <td style={{ padding: '4px' }}> <IconButton iconProps={EditIcon} title="Edit" ariaLabel="Edit" onClick={() => this.EditOrderdatalist(item)} /></td>
-
-                    <td style={{  padding: '4px' }}> <IconButton iconProps={DeleteIcon} title="Delete" ariaLabel="Delete" onClick={() => this.DeleteOrderdatalist(item)} /></td>
-
-
+                                            value={this.state.Workflowdata[i].Forecastdate}
+                                        />
 
 
+                                    </td>
+                                    <td>
 
-                  </tr>;
-                })
+                                        <IconButton iconProps={emojiIcon} title="Cancel" ariaLabel="Cancel" onClick={(e) => this._onSelectForecast(this.state.Workflowdata[i].Forecastdate, i)} />
+
+                                    </td>
+                                    <td>
+                                        <Label ><Moment format="DD-MMM-YYYY" style={{ display: (this.state.Workflowdata[i].Actualdate == null || this.state.Workflowdata[i].Actualdate == "" ? 'none' : 'block') }}>{this.state.Workflowdata[i].Actualdate}</Moment>
+                                        </Label>
+                                    </td>
+                                </tr>;
 
 
-              }
-            </tbody>
+                            })
 
-          </table>
+                        }
 
-        </div>
 
-          <td><PrimaryButton id="Cancel"  style={{ width: "100px"}} text="Cancel" onClick={this.cancel} /></td>
-         
-        {/* {/ <PrimaryButton text="Cancel" onClick={this._onCancel} /> /} */}
 
+                    </tbody>
+                </table>
 
       </div>
+
+
+
+
+      
+  //     <div className={styles.orderDiv}>
+  //       <h2 className={styles.heading}>Capture Order</h2>
+  //       <Label >Product Name</Label>  <Dropdown id="dept"
+  //         placeholder="Select an option"
+  //         selectedKey={this.state.productname}
+  //         options={this.state.productoption}
+  //         onChanged={this.productChanged}
+  //       //onChange={this.deptChanged}
+  //       />
+  //       <p><Label >Required Quantity </Label>
+  //         < TextField value={this.state.requiredquantity} onChange={this._onrequiredquantitychange} errorMessage={this.state.quantityError} >
+  //         </TextField></p>
+  //       <Label>Required Date</Label>
+  //       <DatePicker //style={{ width: '1000px' }}
+  //         //className={controlClass.control}
+  //         firstDayOfWeek={firstDayOfWeek}
+  //         strings={DayPickerStrings}
+  //         value={this.state.requireddate}
+  //         onSelectDate={this._onrequireddateChange}
+  //         placeholder="Select a date..."
+  //         ariaLabel="Select a date"
+  //         isRequired={true}      
+  //         formatDate={(date) => moment(date).format('DD/MM/YYYY')}
+  //       />
+  //       <p><Label >Remarks</Label>
+  //         < TextField value={this.state.remarks} onChange={this.remarkschange} multiline  ></TextField></p>
+
+  //       <p style={{ color: "rgb(164, 38, 44)" }}>{this.state.noDataError}</p>
+  //       <td> <PrimaryButton id="Add" text="Add" onClick={this.Add} style={{ width: "100px",marginLeft:"1px",marginBottom:"5px", display: (this.isAdd == "1" ? 'block' : 'none') }} /></td>
+  //       <td><PrimaryButton id="Update" text="Update" onClick={this.update} style={{ width: "100px",marginLeft:"1px",marginBottom:"5px", display: (this.isAdd == "0" ? 'block' : 'none') }} /></td>
+  //       <div id="orderview">
+  //         <table style={{ border: '1px solid #ddd', display: (this.state.orderdatalist.length == 0 ? 'none' : 'block'), width: '100%', borderCollapse: 'collapse', backgroundColor: '#f2f2f2' }}>
+
+  //           <tr style={{ backgroundColor: '#f2f2f2' }}>
+  //             <th style={{ border: '1px solid #ddd', padding: '4px', borderCollapse: 'collapse' }}>Product Name</th>
+  //             <th style={{ border: '1px solid #ddd', padding: '4px', borderCollapse: 'collapse' }}>Qty</th>
+  //             <th style={{ border: '1px solid #ddd', padding: '4px', borderCollapse: 'collapse' }}>Required date</th>
+  //             <th  style={{padding: '4px' }}></th>
+  //             <th  style={{ padding: '4px' }}></th>
+  //             {/* <th style={{ border: '1px solid #ddd', padding: '8px', borderCollapse: 'collapse' }}>Assigned</th>
+  //  */}
+  //           </tr>
+  //           <tbody style={{ width: '100%', borderCollapse: 'collapse' }}>
+  //             {
+  //               this.state.orderdatalist.map((item) => {
+  //                   return <tr style={{ backgroundColor: '#f2f2f2' }}>
+  //                   <td style={{ border: '1px solid #ddd', padding: '4px', borderCollapse: 'collapse' }}>{item.Product}</td>
+  //                   <td style={{ border: '1px solid #ddd', padding: '4px', borderCollapse: 'collapse' }}>{item.Title}</td>
+  //                   <td style={{ border: '1px solid #ddd', padding: '4px', borderCollapse: 'collapse' }}>{item.RequiredDate}</td>
+  //                   {/* <td style={{ border: '1px solid #ddd', padding: '8px', borderCollapse: 'collapse' }}>{item.ViewAssign}</td> */}
+  //                   <td style={{ padding: '4px' }}> <IconButton iconProps={EditIcon} title="Edit" ariaLabel="Edit" onClick={() => this.EditOrderdatalist(item)} /></td>
+  //                   <td style={{  padding: '4px' }}> <IconButton iconProps={DeleteIcon} title="Delete" ariaLabel="Delete" onClick={() => this.DeleteOrderdatalist(item)} /></td>
+  //                 </tr>;
+  //               })
+  //             }
+  //           </tbody>
+  //         </table>
+  //       </div>
+  //         <td><PrimaryButton id="Cancel"  style={{ width: "100px"}} text="Cancel" onClick={this.cancel} /></td>         
+  //       {/* {/ <PrimaryButton text="Cancel" onClick={this._onCancel} /> /} */}
+  //     </div>
     );
   }
 }
