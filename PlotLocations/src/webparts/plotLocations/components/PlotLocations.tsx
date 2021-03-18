@@ -166,18 +166,30 @@ export default class PlotLocations extends React.Component<IPlotLocationsProps,I
 
     let formattedDate     = moment(this.state.selectedDate).format("YYYY-MM-DDT12:00:00Z");
 
-
     //console.log(formattedDate);
+   
 
     if(this.state.userGlobal == 1)
     {
 
-    //Get selected sales officers route data correspoinding to Today's date
-    const search = await sp.web.lists.getByTitle("Route List").getItemsByCAMLQuery({
-      ViewXml: "<View><Query><Where><And><Eq><FieldRef Name='PlannedDateTime' /><Value Type='DateTime'>" 
-      + formattedDate + "</Value></Eq> <Eq><FieldRef Name='AssignTo' LookupId='TRUE' /><Value Type='Lookup'>"
-      + this.state.officerKey + "</Value></Eq> </And></Where><OrderBy><FieldRef Name='PlannedTime'/></OrderBy></Query></View>",
-  });
+
+      let salesTeam = ((document.getElementById("combo-box-demo") as HTMLInputElement).value);
+      console.log(salesTeam);
+
+  //Get selected sales officers route data correspoinding to Today's date
+  
+      const search = await sp.web.lists.getByTitle("Route List").getItemsByCAMLQuery({
+        ViewXml: "<View><Query><Where><And><Eq><FieldRef Name='PlannedDateTime' /><Value Type='DateTime'>" 
+        + formattedDate + "</Value></Eq> <Eq><FieldRef Name='AssignTo' /><Value Type='Lookup'>"
+        + salesTeam + "</Value></Eq> </And></Where><OrderBy><FieldRef Name='PlannedTime'/></OrderBy></Query></View>",
+    });
+
+    
+  //   const search = await sp.web.lists.getByTitle("Route List").getItemsByCAMLQuery({
+  //     ViewXml: "<View><Query><Where><And><Eq><FieldRef Name='PlannedDateTime' /><Value Type='DateTime'>" 
+  //     + formattedDate + "</Value></Eq> <Eq><FieldRef Name='AssignTo' LookupId='TRUE' /><Value Type='Lookup'>"
+  //     + this.state.officerKey + "</Value></Eq> </And></Where><OrderBy><FieldRef Name='PlannedTime'/></OrderBy></Query></View>",
+  // });
 
   console.log(search);
 
@@ -339,29 +351,18 @@ export default class PlotLocations extends React.Component<IPlotLocationsProps,I
     return (
       <div>
 
+        <table>
+          <tr>
 
-<Autocomplete
+          <Autocomplete
       id="combo-box-demo"
       options={this.state.officerOption.map((option) => option.title)}
       filterOptions={filterOptions}
       //getOptionLabel={(option) => option.title}
-      style={{ width: 300 }}
-      renderInput={(params) => <TextField {...params} label="Sales Team" variant="outlined" />}
+      style={{ width: "250px", height:"50px", display:( this.state.userGlobal== 1 ? '':'none') }}
+      renderInput={(params) => <TextField {...params} label="Select Sales/Service Team" variant="outlined" />}
     />
-
-
-        <table>
-          <tr>
             
-           
-            <Dropdown
-            placeholder="Select Sales/Service Team"
-            options={this.state.officerOptions}
-            onChanged={this.officerChanged}
-            style={{ width: '205px', display:( this.state.userGlobal== 1 ? '':'none')}} 
-          
-            
-          />
           </tr>
           <br></br>
             
