@@ -1,0 +1,18 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/spfx-build/config.2.0.schema.json",
+  "version": "2.0",
+  "bundles": {
+    "capture-order-requisition-web-part": {
+      "components": [
+        {
+          "entrypoint": "./lib/webparts/captureOrderRequisition/CaptureOrderRequisitionWebPart.js",
+          "manifest": "./src/webparts/captureOrderRequisition/CaptureOrderRequisitionWebPart.manifest.json"
+        }
+      ]
+    }
+  },
+  "externals": {},
+  "localizedResources": {
+    "CaptureOrderRequisitionWebPartStrings": "lib/webparts/captureOrderRequisition/loc/{locale}.js"
+  }
+}
