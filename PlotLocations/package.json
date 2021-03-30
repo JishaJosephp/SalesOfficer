@@ -26,7 +26,8 @@
     "react": "16.8.5",
     "react-bingmaps": "^3.6.1",
     "react-dom": "16.8.5",
-    "react-native-maps": "^0.27.1"
+    "react-native-maps": "^0.27.1",
+    "react-responsive": "^8.2.0"
   },
   "devDependencies": {
     "@microsoft/rush-stack-compiler-3.3": "0.3.5",
