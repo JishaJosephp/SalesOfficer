@@ -10,13 +10,21 @@ import { BaseClientSideWebPart } from '@microsoft/sp-webpart-base';
 import * as strings from 'RouteApprovalWebPartStrings';
 import RouteApproval from './components/RouteApproval';
 import { IRouteApprovalProps } from './components/IRouteApprovalProps';
+import { sp } from '@pnp/sp';
 
 export interface IRouteApprovalWebPartProps {
   description: string;
 }
 
 export default class RouteApprovalWebPart extends BaseClientSideWebPart <IRouteApprovalWebPartProps> {
-
+  public async onInit(): Promise<void> {
+    return super.onInit().then(_ => {
+      // other init code may be present
+      sp.setup({
+        spfxContext: this.context,
+      });
+    });
+  }
   public render(): void {
     const element: React.ReactElement<IRouteApprovalProps> = React.createElement(
       RouteApproval,

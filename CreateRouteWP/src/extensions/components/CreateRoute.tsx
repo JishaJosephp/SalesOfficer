@@ -14,6 +14,7 @@ import { Web } from "@pnp/sp/webs";
 import "@pnp/sp/files";
 import "@pnp/sp/folders";
 import * as moment from 'moment';
+import * as _ from 'lodash';
 import { IconButton, IIconProps, initializeIcons } from 'office-ui-fabric-react';
 export interface IRouteindex {
     Id: any;
@@ -204,19 +205,21 @@ export default class CreateRoute extends React.Component<IRouteProps, IRouteStat
         // let districtarray = [];
         let dealerarray = [];
 //States Array
-        const stateitems: any[] = await sp.web.lists.getByTitle("States").items.select("Title,ID").getAll();
+const stateitems: any[] = await sp.web.lists.getByTitle("StateData").items.select("ID,website_id,state").getAll();
         let statearray = [];
+        let sorted_State = [];
         for (let i = 0; i < stateitems.length; i++) {
 
             let statedata = {
-                key: stateitems[i].Id,
-                text: stateitems[i].Title
+                key: stateitems[i].ID,
+                text: stateitems[i].state
             };
             statearray.push(statedata);
 
         }
+        sorted_State = _.orderBy(statearray, 'text', ['asc']);
         this.setState({
-            state: statearray
+            state: sorted_State
         });
 
 
@@ -238,24 +241,25 @@ export default class CreateRoute extends React.Component<IRouteProps, IRouteStat
         console.log(option.key);
         this.setState({ selectedstate: option.key });
         // console.log(this.state.selectedstate);
-        const items: any[] = await sp.web.lists.getByTitle("Districts").items.select("Title,ID").filter(" StateId eq " + option.key).get();
+        const items: any[] = await sp.web.lists.getByTitle("DistrictData").items.select("ID,district,website_id").filter(" state_id eq " + option.key).get();
         console.log(items);
 
-
+        let sorted_District = [];
         let filtereddistrict = [];
         for (let i = 0; i < items.length; i++) {
 
 
             let districtdata = {
-                key: items[i].Id,
-                text: items[i].Title
+                key: items[i].ID,
+                text: items[i].district
             };
 
 
             filtereddistrict.push(districtdata);
         }
+        sorted_District = _.orderBy(filtereddistrict, 'text', ['asc']);
         this.setState({
-            district: filtereddistrict
+            district: sorted_District
         });
     }
     //District Changed
@@ -279,21 +283,21 @@ export default class CreateRoute extends React.Component<IRouteProps, IRouteStat
         });
         this.setState({ selecteddistrict: option.key });
 // Filter Dealer based on district
-        const dealeritems: any[] = await sp.web.lists.getByTitle("Dealer List").items.select("Title,ID").filter(" DistrictId eq " + option.key).get();
-        console.log("dealer" + dealeritems);
-        // console.log("dealer" + dealeritems);
+let sorted_Dealer = [];
+        const dealeritems: any[] = await sp.web.lists.getByTitle("DealersData").items.select("ID,dealer_name,website_id").filter(" district eq " + option.key).get();
+        
         for (let i = 0; i < dealeritems.length; i++) {
 
             let dealer = {
-                key: dealeritems[i].Id,
-                text: dealeritems[i].Title
+                key: dealeritems[i].ID,
+                text: dealeritems[i].dealer_name
             };
 
             dealerarray.push(dealer);
         }
-
+        sorted_Dealer = _.orderBy(dealerarray, 'text', ['asc']);
         this.setState({
-            dealeroption: dealerarray
+            dealeroption: sorted_Dealer
         });
         const useritems: any[] = await sp.web.lists.getByTitle("Users").items.select("Title,ID,UserNameId").filter(" UserType eq 'Sales'").get();
         console.log(useritems);
@@ -301,16 +305,18 @@ export default class CreateRoute extends React.Component<IRouteProps, IRouteStat
         this.salesuseritems = await sp.web.lists.getByTitle("Users").items.select("Title,ID,UserNameId,DistrictId").get();
         console.log("salesusers" + this.salesuseritems);
 
-
+        let sorted_Assign = [];
         for (let i = 0; i < this.salesuseritems.length; i++) {
             if (this.salesuseritems[i].DistrictId == option.key) {
                 user = {
                     key: this.salesuseritems[i].Id,
                     text: this.salesuseritems[i].Title
                 };
-                assigntoarray.push(user);
-            }
 
+                assigntoarray.push(user);
+                sorted_Assign= _.orderBy(assigntoarray, 'text', ['asc']);
+            }
+           
             if (this.state.hideapprover == true) {
                 if (this.state.currentuserid == this.salesuseritems[i].UserNameId) {
                     user = {
@@ -321,12 +327,13 @@ export default class CreateRoute extends React.Component<IRouteProps, IRouteStat
                     userid = user.key;
                     username = user.text;
                     assigntoarray.push(user);
+                    sorted_Assign= _.orderBy(assigntoarray, 'text', ['asc']);
                 }
             }
 
         }
         this.setState({
-            assigntooption: assigntoarray,
+            assigntooption: sorted_Assign,
             assignto: userid,
             assign: assign,
             assignname: username
@@ -361,34 +368,41 @@ export default class CreateRoute extends React.Component<IRouteProps, IRouteStat
         let loc = "";
         let ph = "";
         let locid;
+        let pin ;
         let dealname = "";
         this.setState({ dealername: option.key });
-
-        const dealeritems: any[] = await sp.web.lists.getByTitle("Dealer List").items.get();
+        // const dealeritems = await sp.web.lists.getByTitle("DealersData").getItemsByCAMLQuery({
+        //     ViewXml: "<View><Query><Where><Eq><FieldRef Name='website_id' /><Value Type='Text'>"
+        //         + option.key + "</Value></Eq></Where></Query></View>",
+        // });
+        // const dealeritems: any[] = await sp.web.lists.getByTitle("DealersData").items.filter(" website_id eq " + option.key ).get();
+        const dealeritems: any = await sp.web.lists.getByTitle("DealersData").items.getById(option.key).get();
         console.log(dealeritems);
-        for (let i = 0; i < dealeritems.length; i++) {
-
-            if (dealeritems[i].Id == option.key) {
-                ph = dealeritems[i].ContactNumber;
-                locid = dealeritems[i].City_x002f_LocationId;
-                dealname = dealeritems[i].Title;
+        
+                ph = dealeritems.phone;
+                loc = dealeritems.street;
+                dealname = dealeritems.dealer_name;
+            
+            if (this.state.pin == false){
+                pin= dealeritems.pin;
             }
-        }
-        const item: any = await sp.web.lists.getByTitle("Location").items.getById(locid).get();
-        console.log(item);
-        loc = item.Title;
-        let data = {
-            key: item.Id,
-            text: item.Title
-        };
-        locationarray.push(data);
+        
+        // const item: any = await sp.web.lists.getByTitle("Location").items.getById(locid).get();
+        // console.log(item);
+        // loc = item.Title;
+        // let data = {
+        //     key: item.Id,
+        //     text: item.Title
+        // };
+        // locationarray.push(data);
 
         this.setState({
             contactnumber: ph,
-            locationoption: locationarray,
+            // locationoption: locationarray,
             location: loc,
-            locationid: locid,
-            dealertitle: dealname
+            // locationid: locid,
+            dealertitle: dealname,
+            pincode: pin
         });
     }
 //On Contact Number changed
@@ -469,32 +483,36 @@ export default class CreateRoute extends React.Component<IRouteProps, IRouteStat
         let user;
         let username;
         let locpin;
+        let districtitem;
+        let sorted_Assign = [];
+        let sorted_Dealer = [];
         var index = this.state.routedatalist.indexOf(item);
-        if (item.Pincode == "") {
+        if (item.Pincode == ""||item.Pincode == undefined) {
             this.setState({
                 dontknowpin: false,
                 pin: true,
 
             });
-            const dealeritems: any[] = await sp.web.lists.getByTitle("Dealer List").items.select("Title,ID").filter(" DistrictId eq " + item.DistrictId).get();
-            console.log("dealer" + dealeritems);
-            // console.log("dealer" + dealeritems);
-            for (let i = 0; i < dealeritems.length; i++) {
+            
+            
+        const dealeritems: any[] = await sp.web.lists.getByTitle("DealersData").items.select("ID,dealer_name,website_id").filter(" district eq " + item.DistrictId).get();
+        
+        for (let i = 0; i < dealeritems.length; i++) {
 
-                let dealer = {
-                    key: dealeritems[i].Id,
-                    text: dealeritems[i].Title
-                };
+            let dealer = {
+                key: dealeritems[i].ID,
+                text: dealeritems[i].dealer_name
+            };
 
-                dealerarray.push(dealer);
-            }
-
-            this.setState({
-                dealeroption: dealerarray
-            });
+            dealerarray.push(dealer);
+        }
+        sorted_Dealer = _.orderBy(dealerarray, 'text', ['asc']);
+        this.setState({
+            dealeroption: sorted_Dealer
+        });
             const useritems: any[] = await sp.web.lists.getByTitle("Users").items.select("Title,ID,UserNameId").filter(" UserType eq 'Sales'").get();
             console.log(useritems);
-
+           
             this.salesuseritems = await sp.web.lists.getByTitle("Users").items.select("Title,ID,UserNameId,DistrictId").get();
             console.log("salesusers" + this.salesuseritems);
 
@@ -505,7 +523,9 @@ export default class CreateRoute extends React.Component<IRouteProps, IRouteStat
                         key: this.salesuseritems[i].Id,
                         text: this.salesuseritems[i].Title
                     };
+                    
                     assigntoarray.push(user);
+                    sorted_Assign= _.orderBy(assigntoarray, 'text', ['asc']);
                 }
 
                 if (this.state.hideapprover == true) {
@@ -518,12 +538,13 @@ export default class CreateRoute extends React.Component<IRouteProps, IRouteStat
                         userid = user.key;
                         username = user.text;
                         assigntoarray.push(user);
+                        sorted_Assign= _.orderBy(assigntoarray, 'text', ['asc']);
                     }
                 }
 
             }
             this.setState({
-                assigntooption: assigntoarray,
+                assigntooption: sorted_Assign,
                 assignto: userid,
                 assign: assign,
                 assignname: username
@@ -542,37 +563,35 @@ export default class CreateRoute extends React.Component<IRouteProps, IRouteStat
             console.log(locpin.trim());
 
 
-            const dealeritems = await sp.web.lists.getByTitle("Dealer List").getItemsByCAMLQuery({
-                ViewXml: "<View><Query><Where><BeginsWith><FieldRef Name='City_x002f_Location_x003a_PinCod' /><Value Type='Lookup'>"
-                    + locpin + "</Value></BeginsWith></Where></Query></View>",
-            });
+            const dealeritems: any[] = await sp.web.lists.getByTitle("DealersData").items.filter("substringof('" + locpin + "',pin)").getAll(5000);
+        console.log(dealeritems);
+        for (let i = 0; i < dealeritems.length; i++) {
 
-            console.log(dealeritems);
-            for (let i = 0; i < dealeritems.length; i++) {
+            let dealer = {
+                key: dealeritems[i].ID,
+                text: dealeritems[i].dealer_name
+            };
+            districtitem = dealeritems[i].district;
+            
+            dealerarray.push(dealer);
+            sorted_Dealer = _.orderBy(dealerarray, 'text', ['asc']);
+        }
 
-                let dealer = {
-                    key: dealeritems[i].Id,
-                    text: dealeritems[i].Title
-                };
-
-                dealerarray.push(dealer);
-            }
-
-            this.setState({
-                dealeroption: dealerarray
-            });
-            let districtitem;
-            const locationitems = await sp.web.lists.getByTitle("Location").getItemsByCAMLQuery({
-                ViewXml: "<View><Query><Where><BeginsWith><FieldRef Name='PinCode' /><Value Type='Text'>"
-                    + locpin + "</Value></BeginsWith></Where></Query></View>",
-            });
-            console.log(locationitems);
-            for (let i = 0; i < locationitems.length; i++) {
-                districtitem = locationitems[i].DistrictsId;
-            }
-            this.salesuseritems = await sp.web.lists.getByTitle("Users").items.select("Title,ID,UserNameId").filter(" DistrictId eq " + districtitem).get();
+        this.setState({
+            dealeroption: sorted_Dealer
+        });
+        
+            // const locationitems = await sp.web.lists.getByTitle("Location").getItemsByCAMLQuery({
+            //     ViewXml: "<View><Query><Where><BeginsWith><FieldRef Name='PinCode' /><Value Type='Text'>"
+            //         + locpin + "</Value></BeginsWith></Where></Query></View>",
+            // });
+            // console.log(locationitems);
+            // for (let i = 0; i < locationitems.length; i++) {
+            //     districtitem = locationitems[i].DistrictsId;
+            // }
+            this.salesuseritems = await sp.web.lists.getByTitle("Users").items.select("Title,ID,UserNameId").get();
             for (let i = 0; i < this.salesuseritems.length; i++) {
-
+                if (this.salesuseritems[i].DistrictId == districtitem || this.state.currentuserid == this.salesuseritems[i].UserNameId) {
                 user = {
                     key: this.salesuseritems[i].Id,
                     text: this.salesuseritems[i].Title
@@ -580,8 +599,9 @@ export default class CreateRoute extends React.Component<IRouteProps, IRouteStat
 
                 if (assigntoarray.indexOf(user) == -1) {
                     assigntoarray.push(user);
+                    sorted_Assign= _.orderBy(assigntoarray, 'text', ['asc']);
                 }
-
+            }
                 if (this.state.hideapprover == true) {
                     if (this.state.currentuserid == this.salesuseritems[i].UserNameId) {
                         user = {
@@ -592,12 +612,13 @@ export default class CreateRoute extends React.Component<IRouteProps, IRouteStat
                         userid = user.key;
                         username = user.text;
                         assigntoarray.push(user);
+                        sorted_Assign= _.orderBy(assigntoarray, 'text', ['asc']);
                     }
                 }
 
 
                 this.setState({
-                    assigntooption: assigntoarray,
+                    assigntooption: sorted_Assign,
                     assignto: userid,
                     assign: assign,
                     assignname: username
@@ -662,7 +683,8 @@ export default class CreateRoute extends React.Component<IRouteProps, IRouteStat
                 nodealer: true,
                 nouserdealer: true,
                 assignname: "",
-                datedisable: true
+                datedisable: true,
+                pincode:""
 
             });
             this.setState({
@@ -826,7 +848,7 @@ export default class CreateRoute extends React.Component<IRouteProps, IRouteStat
                             Hours: this.state.selectedhour,
                             Minutes: this.state.selectedmin,
                             PlannedDateTime: pdt,
-                            LocationsId: this.state.locationid,
+                            // LocationsId: this.state.locationid,
                             AssignId: this.state.assign,
                             Pincode: this.state.pincode,
                             Checkin: "1"
@@ -871,6 +893,7 @@ export default class CreateRoute extends React.Component<IRouteProps, IRouteStat
                             });
                         }
                         this.setState({
+                            dealeroption:[],
                             selectedstate: "",
                             selecteddistrict: "",
                             selectedhour: "",
@@ -924,7 +947,7 @@ export default class CreateRoute extends React.Component<IRouteProps, IRouteStat
                             Hours: this.state.selectedhour,
                             Minutes: this.state.selectedmin,
                             PlannedDateTime: pdt,
-                            LocationsId: this.state.locationid,
+                            // LocationsId: this.state.locationid,
                             AssignId: this.state.assign,
                             Pincode: this.state.pincode,
                             Checkin: "1",
@@ -971,6 +994,7 @@ export default class CreateRoute extends React.Component<IRouteProps, IRouteStat
                             });
                         }
                         this.setState({
+                            dealeroption:[],
                             selectedstate: "",
                             selecteddistrict: "",
                             selectedhour: "",
@@ -1037,8 +1061,11 @@ export default class CreateRoute extends React.Component<IRouteProps, IRouteStat
         let plannedMonth = moment(this.state.planneddate).format('MM');
         let plannedday = moment(this.state.planneddate).format('DD');
         let list = sp.web.lists.getByTitle("Route List");
-        const dealeritems: any = await sp.web.lists.getByTitle("Dealer List").items.getById(dealerid).get();
-        dealname = dealeritems.Title;
+        const dealeritems: any = await sp.web.lists.getByTitle("DealersData").items.getById(dealerid).get();
+        
+            dealname = dealeritems.dealer_name;
+     
+        
         const useritems: any = await sp.web.lists.getByTitle("Users").items.getById(assignid).get();
         console.log(useritems);
         assign = useritems.Title;
@@ -1178,7 +1205,7 @@ export default class CreateRoute extends React.Component<IRouteProps, IRouteStat
                     Minutes: this.state.selectedmin,
                     PlannedDateTime: pdt,
                     Pincode: this.state.pincode,
-                    LocationsId: this.state.locationid,
+                    // LocationsId: this.state.locationid,
                     AssignId: this.state.assign,
                     Checkin: "1"
 
@@ -1257,7 +1284,7 @@ export default class CreateRoute extends React.Component<IRouteProps, IRouteStat
                     Minutes: this.state.selectedmin,
                     PlannedDateTime: pdt,
                     Pincode: this.state.pincode,
-                    LocationsId: this.state.locationid,
+                    // LocationsId: this.state.locationid,
                     AssignId: this.state.assign,
                     Checkin: "1"
 
@@ -1328,6 +1355,14 @@ export default class CreateRoute extends React.Component<IRouteProps, IRouteStat
             selecteddistrict: "",
             selectedstate: ""
         });
+        this.setState({
+             mandatory: true, 
+             dealerbusy: true,
+             assignbusy: true,
+             nodealer:true,
+            nouser: true,
+        nouserdealer: true,
+     });
         let user1 = await sp.web.currentUser();
         this.setState({
             currentuser: user1.Title,
@@ -1339,7 +1374,9 @@ export default class CreateRoute extends React.Component<IRouteProps, IRouteStat
         let userid;
         let assign;
         let user;
+        let districtitem;
         let username;
+        let sorted_Dealer = [];
         let extension = /^[0-9]+$/;
         if (pin.match(extension)) {
             this.setState({ pinerrormsg: '' });
@@ -1349,49 +1386,49 @@ export default class CreateRoute extends React.Component<IRouteProps, IRouteStat
         }
         pin = pin.substring(0, 4);
 
-        console.log(pin.trim());
-
-
-        const dealeritems = await sp.web.lists.getByTitle("Dealer List").getItemsByCAMLQuery({
-            ViewXml: "<View><Query><Where><BeginsWith><FieldRef Name='City_x002f_Location_x003a_PinCod' /><Value Type='Lookup'>"
-                + pin + "</Value></BeginsWith></Where></Query></View>",
-        });
-
+       const dealeritems: any[] = await sp.web.lists.getByTitle("DealersData").items.filter("substringof('" + pin + "',pin)").getAll(5000);
         console.log(dealeritems);
+        if(dealeritems.length>0)
+        {
         for (let i = 0; i < dealeritems.length; i++) {
 
             let dealer = {
-                key: dealeritems[i].Id,
-                text: dealeritems[i].Title
+                key: dealeritems[i].ID,
+                text: dealeritems[i].dealer_name
             };
-
+            districtitem = dealeritems[i].district;
+            
             dealerarray.push(dealer);
+            sorted_Dealer = _.orderBy(dealerarray, 'text', ['asc']);
         }
 
         this.setState({
-            dealeroption: dealerarray
+            dealeroption: sorted_Dealer,
+            nodealer:true
         });
-        let districtitem;
-        const locationitems = await sp.web.lists.getByTitle("Location").getItemsByCAMLQuery({
-            ViewXml: "<View><Query><Where><BeginsWith><FieldRef Name='PinCode' /><Value Type='Text'>"
-                + pin + "</Value></BeginsWith></Where></Query></View>",
-        });
-        console.log(locationitems);
-        for (let i = 0; i < locationitems.length; i++) {
-            districtitem = locationitems[i].DistrictsId;
-        }
-        this.salesuseritems = await sp.web.lists.getByTitle("Users").items.select("Title,ID,UserNameId").filter(" DistrictId eq " + districtitem).get();
+        
+        // const locationitems = await sp.web.lists.getByTitle("DealersData").getItemsByCAMLQuery({
+        //     ViewXml: "<View><Query><Where><BeginsWith><FieldRef Name='pin' /><Value Type='Number'>"
+        //     + pin + "</Value></BeginsWith></Where></Query><RowLimit>4000</RowLimit></View>",
+        // });
+        // console.log(locationitems);
+        // for (let i = 0; i < locationitems.length; i++) {
+            
+        // }
+        this.salesuseritems = await sp.web.lists.getByTitle("Users").items.select("Title,ID,UserNameId,DistrictId").get();
+        console.log("salesusers" + this.salesuseritems);
+
+        let sorted_Assign = [];
         for (let i = 0; i < this.salesuseritems.length; i++) {
-
-            user = {
-                key: this.salesuseritems[i].Id,
-                text: this.salesuseritems[i].Title
-            };
-
-            if (assigntoarray.indexOf(user) == -1) {
+            if (this.salesuseritems[i].DistrictId == districtitem) {
+                user = {
+                    key: this.salesuseritems[i].Id,
+                    text: this.salesuseritems[i].Title
+                };
                 assigntoarray.push(user);
+                sorted_Assign= _.orderBy(assigntoarray, 'text', ['asc']);
             }
-
+           
             if (this.state.hideapprover == true) {
                 if (this.state.currentuserid == this.salesuseritems[i].UserNameId) {
                     user = {
@@ -1402,25 +1439,30 @@ export default class CreateRoute extends React.Component<IRouteProps, IRouteStat
                     userid = user.key;
                     username = user.text;
                     assigntoarray.push(user);
+                    sorted_Assign= _.orderBy(assigntoarray, 'text', ['asc']);
                 }
             }
 
+        }
 
             this.setState({
-                assigntooption: assigntoarray,
+                assigntooption: sorted_Assign,
                 assignto: userid,
                 assign: assign,
-                assignname: username
+                assignname: username,
+                nodealer:true,
+                nouser: true,
+            nouserdealer: true,
 
             });
         }
-        if (this.state.dealeroption.length == 0 && this.state.assigntooption.length == 0) {
+        else if (dealeritems.length == 0 && this.state.assigntooption.length == 0) {
             this.setState({
                 nouserdealer: false
 
             });
         }
-        else if (this.state.dealeroption.length == 0) {
+        else if (dealeritems.length == 0) {
             this.setState({
                 nodealer: false
 
@@ -1547,13 +1589,13 @@ export default class CreateRoute extends React.Component<IRouteProps, IRouteStat
                 customWidth={'800px'} onDismiss={this._onCancel}  >
 
                 <h3>Create Route</h3>
-                <div hidden={this.state.mandatory}><Label style={{ color: "red" }}>Please fill all mandatory fields</Label></div>
-                <div hidden={this.state.nodealer}><Label style={{ color: "red" }}>No Dealer in this district</Label></div>
-                <div hidden={this.state.nouser}><Label style={{ color: "red" }}>No User in this district </Label></div>
-                <div hidden={this.state.nouserdealer}><Label style={{ color: "red" }}>No Dealer and User in this district </Label></div>
-                <div hidden={this.state.dealerbusy}><Label style={{ color: "red" }}>Dealer has an appointment at the same time.Please choose another </Label></div>
-                <div hidden={this.state.assignbusy}><Label style={{ color: "red" }}>User has an appointment at the same time.Please choose another time </Label></div>
-                <div hidden={this.state.nopin}><Label style={{ color: "red" }}>Please Select District or Enter Pincode </Label></div>
+                <div hidden={this.state.mandatory}><Label style={{ color: "rgb(164, 38, 44)" }}>Please fill all mandatory fields</Label></div>
+                <div hidden={this.state.nodealer}><Label style={{ color: "rgb(164, 38, 44)" }}>No Dealer in this district</Label></div>
+                <div hidden={this.state.nouser}><Label style={{ color: "rgb(164, 38, 44)" }}>No User in this district </Label></div>
+                <div hidden={this.state.nouserdealer}><Label style={{ color: "rgb(164, 38, 44)" }}>No Dealer and User in this district </Label></div>
+                <div hidden={this.state.dealerbusy}><Label style={{ color: "rgb(164, 38, 44)" }}>Dealer has an appointment at the same time.Please choose another </Label></div>
+                <div hidden={this.state.assignbusy}><Label style={{ color: "rgb(164, 38, 44)" }}>User has an appointment at the same time.Please choose another time </Label></div>
+                <div hidden={this.state.nopin}><Label style={{ color: "rgb(164, 38, 44)" }}>Please Select District or Enter Pincode </Label></div>
                 <Label>Planned Date And Time</Label>
                 <table><tr><td>
                     <DatePicker //style={{ width: '1000px' }}
@@ -1632,6 +1674,7 @@ export default class CreateRoute extends React.Component<IRouteProps, IRouteStat
                         errorMessage={this.state.pinerrormsg}
                         required={true}
                         value={this.state.pincode} ></TextField>
+                        
                     <table><tr><td><Label>Click here if you don't know pincode</Label></td><td>
                         <IconButton iconProps={ErrorIcon} title="Don't know pincode" ariaLabel="Don't know pincode" onClick={() => this.nopin()} />
                     </td>  </tr> </table>
@@ -1644,9 +1687,9 @@ export default class CreateRoute extends React.Component<IRouteProps, IRouteStat
                     required={true}
                 //onChange={this.deptChanged}
                 />
-                <table><tr><td><Label>Add New Dealer</Label></td><td>
+                {/* <table><tr><td><Label>Add New Dealer</Label></td><td>
                         <IconButton iconProps={UpdateIcon} title="Add Dealer" ariaLabel="Add Dealer" onClick={() => this.adddealer()} />
-                    </td>  </tr> </table>
+                    </td>  </tr> </table> */}
                 {/* <div>
                     <p><Label >Location</Label>  <Dropdown id="location"
                         placeholder="Select an option"

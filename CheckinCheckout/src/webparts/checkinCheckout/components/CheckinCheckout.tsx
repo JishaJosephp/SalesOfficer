@@ -33,6 +33,7 @@ export interface IWorkingWithState {
   routeid:any;
   hideremark:boolean;
   fromMail:any;
+  dealer_website_id:any;
  }
  
 
@@ -52,6 +53,7 @@ export default class CheckinCheckout extends React.Component<ICheckinCheckoutPro
       dealertitle:"",
       remarks: "",
       fromMail:"",
+      dealer_website_id:"",
       mandatory:true,
       hidecheckin: true,
       hidecheckout: true,
@@ -76,6 +78,7 @@ export default class CheckinCheckout extends React.Component<ICheckinCheckoutPro
     let dealerid;
     let dealername;
     let checkin;
+    let dealer_website_id;
     try{
     let user = await sp.web.currentUser();
     console.log(user);
@@ -101,6 +104,7 @@ export default class CheckinCheckout extends React.Component<ICheckinCheckoutPro
     dealerid = queryParms.getValue("dealerId");
     routeid = queryParms.getValue("RouteId");
     checkin = queryParms.getValue("checkin");
+    dealer_website_id=queryParms.getValue("dealer_website_id");
     const checkinData = await sp.web.lists.getByTitle("CheckIn CheckOut").getItemsByCAMLQuery({
       ViewXml: "<View><Query><Where><And><Eq><FieldRef Name='LogType' /><Value Type='Choice'>Check In</Value></Eq> <Eq><FieldRef Name='Route' LookupId='TRUE' /><Value Type='Lookup'>"
       + routeid + "</Value></Eq> </And></Where></Query></View>",
@@ -124,9 +128,10 @@ export default class CheckinCheckout extends React.Component<ICheckinCheckoutPro
     var currentdate = new Date();
     console.log(currentdate);
     let today = moment(currentdate).format('YYYY-MM-DDT12:00:00Z');
-    const dealeritems = await sp.web.lists.getByTitle("Dealer List").items.getById(dealerid).get();
+    
+    const dealeritems = await sp.web.lists.getByTitle("DealersData").items.getById(dealerid).get();
       console.log(dealeritems);
-      dealername = dealeritems.Title;
+      dealername = dealeritems.dealer_name;
 
  
     if(navigator.geolocation) {
@@ -139,6 +144,7 @@ export default class CheckinCheckout extends React.Component<ICheckinCheckoutPro
                 dealername:dealerid,
                 routeid:routeid,
                 dealertitle:dealername,
+                dealer_website_id:dealer_website_id
             });
 
     
@@ -158,6 +164,7 @@ export default class CheckinCheckout extends React.Component<ICheckinCheckoutPro
     private async checkin(){
       this.setState({ mandatory: true }); 
       let checkinId;
+      let isCheckin = false;
       var currentdate = new Date();
       let location = this.state.latitude+","+this.state.longitude;
       const routeitems = await sp.web.lists.getByTitle("Route List").items.getById(this.state.routeid).get();
@@ -168,7 +175,22 @@ export default class CheckinCheckout extends React.Component<ICheckinCheckoutPro
         ViewXml: "<View><Query><Where><And><Eq><FieldRef Name='LogType' /><Value Type='Choice'>Check In</Value></Eq> <Eq><FieldRef Name='DealerName' LookupId='TRUE' /><Value Type='Lookup'>"
         + this.state.dealername + "</Value></Eq> </And></Where></Query></View>",
     });
-  if(search.length != 0){
+    
+if(search.length > 0)
+{
+for (let i = 0; i < search.length; i++) {
+let item=search[i];
+let checkin=item.Checkin;
+let checkinDate = moment(checkin).format("YYYY-MM-DD");
+let currentDatee = moment(currentdate).format("YYYY-MM-DD");
+if(checkinDate == currentDatee)
+{
+isCheckin = true;
+}
+}
+
+}
+  if(search.length != 0 && isCheckin){
     alert("Sales Officer already checkin to this dealer now. Please try after some time");
   }
    else if ( this.state.dealername == ""){
@@ -247,7 +269,7 @@ export default class CheckinCheckout extends React.Component<ICheckinCheckoutPro
 
     }
     private async check(){
-      let conf = confirm("Are you sure to checkout? Click OK to Checkout or Cancel to Update Capture Order or Balance Stock");
+      let conf = confirm("Are you sure to checkout? Click OK to Checkout or Cancel to New Order or Stock Update");
       if (conf == true) {
  
       this.setState({ 
@@ -269,10 +291,10 @@ export default class CheckinCheckout extends React.Component<ICheckinCheckoutPro
       });
     }
     public  captureorder(){ 
-      window.location.href = "https://mrbutlers.sharepoint.com/sites/SalesOfficerApplication/SitePages/CaptureOrder.aspx?dealerId="+this.state.dealername+"&RouteId="+this.state.routeid;
+      window.location.href = "https://mrbutlers.sharepoint.com/sites/SalesOfficerApplication/SitePages/CaptureOrder.aspx?dealerId="+this.state.dealername+"&RouteId="+this.state.routeid+"&dealer_website_id="+this.state.dealer_website_id;
     }
     public  balancesheet(){
-       window.location.href = "https://mrbutlers.sharepoint.com/sites/SalesOfficerApplication/SitePages/Balancesheet.aspx?dealerId="+this.state.dealername+"&RouteId="+this.state.routeid;
+       window.location.href = "https://mrbutlers.sharepoint.com/sites/SalesOfficerApplication/SitePages/Balancesheet.aspx?dealerId="+this.state.dealername+"&RouteId="+this.state.routeid+"&dealer_website_id="+this.state.dealer_website_id;
     }
  
   public remarkschange = (ev: React.FormEvent<HTMLInputElement>, remarks?: any) => {
@@ -289,7 +311,8 @@ export default class CheckinCheckout extends React.Component<ICheckinCheckoutPro
           <div hidden={this.state.mandatory}><Label style={{ color: "red" }}>Please fill all mandatory fields</Label></div>
          <div ><Label ><h1>{this.state.dealertitle}</h1></Label> </div>
                 <div hidden={this.state.hideremark}>
-                <Label >Remarks:</Label>< TextField value={this.state.remarks} onChange={this.remarkschange} multiline required></TextField>
+                <Label >Remarks:</Label>
+                < TextField value={this.state.remarks} onChange={this.remarkschange} multiline required></TextField>
                 </div>
           <table style={{alignContent:"Right"}} hidden={this.state.hidesales} >
             <tr></tr>
