@@ -1,0 +1,31 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/core-build/serve.schema.json",
+  "port": 4321,
+  "https": true,
+  "serveConfigurations": {
+    "default": {
+      "pageUrl": "https://mrbutlers.sharepoint.com/sites/SalesOfficerApplication/Lists/Users/AdminUsers.aspx",
+      "customActions": {
+        "375f4716-0e8d-4a3c-8d79-ce9929d321aa": {
+          "location": "ClientSideExtension.ListViewCommandSet.CommandBar",
+          "properties": {
+            "sampleTextOne": "One item is selected in the list",
+            "sampleTextTwo": "This command is always visible."
+          }
+        }
+      }
+    },
+    "users": {
+      "pageUrl": "https://mrbutlers.sharepoint.com/sites/SalesOfficerApplication/Lists/Users/AdminUsers.aspx",
+      "customActions": {
+        "375f4716-0e8d-4a3c-8d79-ce9929d321aa": {
+          "location": "ClientSideExtension.ListViewCommandSet.CommandBar",
+          "properties": {
+            "sampleTextOne": "One item is selected in the list",
+            "sampleTextTwo": "This command is always visible."
+          }
+        }
+      }
+    }
+  }
+}
