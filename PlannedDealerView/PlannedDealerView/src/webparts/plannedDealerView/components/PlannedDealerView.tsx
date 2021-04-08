@@ -47,7 +47,16 @@ export const viewFields: IViewField[] = [{
   sorting: true,
   minWidth: 150,
   maxWidth: 150
-}, {
+},
+{
+  name: "Status",
+  displayName: "Status",
+  isResizable: true,
+  sorting: true,
+  minWidth: 60,
+  maxWidth: 60
+},
+ {
   name: "PlannedDateTime",
   displayName: "Planned Date",
   isResizable: true,
@@ -70,6 +79,7 @@ export const viewFields: IViewField[] = [{
   minWidth: 150,
   maxWidth: 150
 },
+
 ];
 export default class PlannedDealerView extends React.Component<IPlannedDealerViewProps, IPlannedDealerViewState, any> {
 
@@ -93,6 +103,8 @@ export default class PlannedDealerView extends React.Component<IPlannedDealerVie
   }
   private async _getSelection(items: any[]) {
     console.log(items);
+    let isCheckin=false;
+    let isCheckins=false;
     let currentDate = moment(new Date()).format("YYYY-MM-DD");
     let planneddate = moment(items[0].PlannedDate).format("YYYY-MM-DD");
     let today = new Date();
@@ -116,8 +128,22 @@ export default class PlannedDealerView extends React.Component<IPlannedDealerVie
         + this.state.user + "</Value></Neq><Eq><FieldRef Name='DealerName' LookupId='TRUE' /><Value Type='Lookup'>"
              + items[0].DealerNameId + "</Value></Eq></And><Eq><FieldRef Name='LogType' /> <Value Type='Choice'>Check In</Value></Eq></And></Where></Query></View>",
     });
-    console.log(checkinData);
-if(checkinData.length == 0)
+    console.log(checkinData);  
+   
+    if(checkinData.length > 0)
+    {
+      for (let i = 0; i < checkinData.length; i++) {
+        let item=checkinData[i];
+        let checkin=item.Checkin;
+        let checkinDate = moment(checkin).format("YYYY-MM-DD");
+        if(checkinDate == currentDate)
+        {
+          isCheckin = true;
+        }
+      } 
+   
+    }
+if(checkinData.length == 0 || !isCheckin)
 {
   //already this user checkin to any other dealer
   // const plannedData = await sp.web.lists.getByTitle("Route List").getItemsByCAMLQuery({
@@ -139,16 +165,30 @@ if(checkinData.length == 0)
         for (let i = 0; i < plannedData.length; i++) {
           if(items[0].Id==plannedData[i].ID)
           {
-            const checkinData = await sp.web.lists.getByTitle("CheckIn CheckOut").getItemsByCAMLQuery({
+            const checkinDatas = await sp.web.lists.getByTitle("CheckIn CheckOut").getItemsByCAMLQuery({
               ViewXml: "<View><Query><Where><And><Eq><FieldRef Name='UserName' /><Value Type='Person or Group'>"
                 + this.state.user + "</Value></Eq><Eq><FieldRef Name='LogType' /> <Value Type='Choice'>Check In</Value></Eq></And></Where></Query></View>",
             });
-            console.log(checkinData);
-            if (checkinData.length == 0) {
+            console.log(checkinDatas);
+            if(checkinDatas.length > 0)
+    {
+      for (let i = 0; i < checkinDatas.length; i++) {
+        let item=checkinDatas[i];
+    let checkins=item.Checkin;
+    let checkinDates = moment(checkins).format("YYYY-MM-DD");
+    if(checkinDates == currentDate)
+    {
+      isCheckins = true;
+
+    }
+      }
+    
+    }
+            if (checkinDatas.length == 0 || !isCheckins) {
               let conf = confirm("Are you sure to move checkin page ?");
               if (conf == true) {
               
-                  window.location.href = "https://mrbutlers.sharepoint.com/sites/SalesOfficerApplication/SitePages/Checkin-Checkout.aspx?dealerId=" + items[0].DealerNameId + "&RouteId=" + items[0].Id + "&checkin=" + items[0].Checkin;
+                  window.location.href = "https://mrbutlers.sharepoint.com/sites/SalesOfficerApplication/SitePages/Checkin-Checkout.aspx?dealerId=" + items[0].DealerNameId + "&RouteId=" + items[0].Id + "&checkin=" + items[0].Checkin +"&dealer_website_id="+items[0].Minutes;
               }
             }
     else{
@@ -163,7 +203,7 @@ if(checkinData.length == 0)
     else  if (items[0].Checkin == "0")
     {
       if (plannedData[0].DealerNameId == items[0].DealerNameId) {
-        window.location.href = "https://mrbutlers.sharepoint.com/sites/SalesOfficerApplication/SitePages/Checkin-Checkout.aspx?dealerId=" + items[0].DealerNameId + "&RouteId=" + items[0].Id + "&checkin=" + items[0].Checkin;
+        window.location.href = "https://mrbutlers.sharepoint.com/sites/SalesOfficerApplication/SitePages/Checkin-Checkout.aspx?dealerId=" + items[0].DealerNameId + "&RouteId=" + items[0].Id + "&checkin=" + items[0].Checkin+"&dealer_website_id="+items[0].Minutes;
       }
     }
     else  if (items[0].Checkin == "2")
@@ -173,7 +213,7 @@ if(checkinData.length == 0)
     }
     else {
       if (plannedData[0].DealerNameId == items[0].DealerNameId) {
-        window.location.href = "https://mrbutlers.sharepoint.com/sites/SalesOfficerApplication/SitePages/Checkin-Checkout.aspx?dealerId=" + items[0].DealerNameId + "&RouteId=" + items[0].Id + "&checkin=" + items[0].Checkin;
+        window.location.href = "https://mrbutlers.sharepoint.com/sites/SalesOfficerApplication/SitePages/Checkin-Checkout.aspx?dealerId=" + items[0].DealerNameId + "&RouteId=" + items[0].Id + "&checkin=" + items[0].Checkin+"&dealer_website_id="+items[0].Minutes;
       }
       else {
         alert("You are already checked into one dealer at this time. Try again after check out");
@@ -248,17 +288,13 @@ else{
 
     for (let i = 0; i < plannedData.length; i++) {
 
-      const dealer: any = await sp.web.lists.getByTitle("Dealer List").items.getById(plannedData[i].DealerNameId).get();
+      const dealer: any = await sp.web.lists.getByTitle("DealersData").items.getById(plannedData[i].DealerNameId).get();
       console.log(dealer.Title);
-      plannedData[i].DistrictId = dealer.Title;
+      plannedData[i].DistrictId = dealer.dealer_name;
       plannedData[i].PlannedDateTime = moment(plannedData[i].PlannedDateTime).format("DD-MMM-YYYY HH:mm A");
       // const location: any = await sp.web.lists.getByTitle("Location").items.getById(plannedData[i].LocationId).get();
       // console.log(location.Title);
-      // plannedData[i].LocationId=location.Title;  
-
-
-
-
+       plannedData[i].Minutes=dealer.website_id;   //Assign dealer website_id to Mintute(Not used this field in thi WP)
 
     }
 
