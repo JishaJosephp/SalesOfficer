@@ -127,7 +127,7 @@ export default class PlotLocations extends React.Component<IPlotLocationsProps,I
     let optionUser = [];
     let opt=[];
     for (let i = 0; i < userName.length; i++) {
-      opt.push({ "title": userName[i].Title,"Id":  userName[i].Id});
+      opt.push({ "title": userName[i].UserNamee,"Id":  userName[i].Id, "Email": userName[i].EmailId});
   
         let userdata = {
             key: userName[i].Id,
@@ -187,12 +187,13 @@ export default class PlotLocations extends React.Component<IPlotLocationsProps,I
 
   //Get selected sales officers route data correspoinding to Today's date
   
-      const search = await sp.web.lists.getByTitle("Route List").getItemsByCAMLQuery({
-        ViewXml: "<View><Query><Where><And><Eq><FieldRef Name='PlannedDateTime' /><Value Type='DateTime'>" 
-        + formattedDate + "</Value></Eq> <Eq><FieldRef Name='AssignTo' /><Value Type='Lookup'>"
-        + this.state.selectedTeam + "</Value></Eq> </And></Where><OrderBy><FieldRef Name='PlannedTime'/></OrderBy></Query></View>",
+      const search = await sp.web.lists.getByTitle("CheckIn CheckOut").getItemsByCAMLQuery({
+        ViewXml: "<View><Query><Where><And><Eq><FieldRef Name='Checkin' /><Value Type='DateTime'>" 
+        + formattedDate + "</Value></Eq> <Eq><FieldRef Name='UserName' /><Value Type='Person or Group'>"
+        + this.state.selectedTeam + "</Value></Eq> </And></Where><OrderBy><FieldRef Name='Checkin'/></OrderBy></Query></View>",
     });
     console.log(search);
+
 
     
   //   const search = await sp.web.lists.getByTitle("Route List").getItemsByCAMLQuery({
@@ -206,8 +207,11 @@ export default class PlotLocations extends React.Component<IPlotLocationsProps,I
   for(let i = 0; i < search.length; i++)
   {
     
-   
+    if(search[i].LogLocation != null || search[i].LogLocation != ''){
+    
     count    =i+1+"";
+
+    cooSplit = search[i].LogLocation.split(',');
 
     const dealer = await sp.web.lists.getByTitle("DealersData").items.getById(search[i].DealerNameId).get();
     console.log(dealer);
@@ -216,29 +220,38 @@ export default class PlotLocations extends React.Component<IPlotLocationsProps,I
     dealerLocation=dealer.street;
     
     //co_ordinates=dealer.latitude,dealer.longitude;
-     latitudeLongitude=dealer.latitude+","+dealer.longitude;
-    cooSplit = latitudeLongitude.split(',');
 
 
-    if(search[i].Status == null  || search[i].Status == undefined)
+    if(search[i].LogType == "Check In")
     {
-
-      infoDescription="Time: "+search[i].PlanTime;
+      infoDescription=search[i].LogType+"<br/>"+"Time: "+moment(search[i].Checkin).format('H:mm:ss');
 
     //Change details to acceptable array format
     locationDetails[i]={ "location":cooSplit,  "addHandler":"mouseover", "infoboxOption": { title: dealerName, description: infoDescription }, "pushPinOption":{color:"red",text: count , description: dealerLocation }}
   
     }
   
-    else{
+    else if(search[i].LogType == "Check Out"){
   
     
-      infoDescription="Time: "+search[i].PlanTime+"<br/>"+search[i].Status;
+      infoDescription=search[i].LogType+"<br/>"+"Time: "+moment(search[i].Checkout).format('H:mm:ss');
 
      //Change details to acceptable array format
       locationDetails[i]={ "location":cooSplit,  "addHandler":"mouseover", "infoboxOption": { title: dealerName, description: infoDescription }, "pushPinOption":{ color:"red",text: count , description: dealerLocation }}
   
     }
+
+    else if(search[i].LogType == "Nil"){
+
+      infoDescription=search[i].LogType+"<br/>"+"Time: "+moment(search[i].Checkin).format('H:mm:ss');
+      
+      //Change details to acceptable array format
+  
+      locationDetails[i]={ "location":cooSplit,  "addHandler":"mouseover", "infoboxOption": { title: dealerName, description: infoDescription }, "pushPinOption":{ color:"red",text: count , description: dealerLocation }}
+  
+    }
+
+  }
     
    
     //locationDetails[i]={ "location":cooSplit, "option":{ color: 'red',text: count , description: item.Title }}
@@ -272,58 +285,67 @@ export default class PlotLocations extends React.Component<IPlotLocationsProps,I
     {
 
        //Get logged in sales officers route data correspoinding to Today's date
-    const search = await sp.web.lists.getByTitle("Route List").getItemsByCAMLQuery({
-      ViewXml: "<View><Query><Where><And><Eq><FieldRef Name='PlannedDateTime' /><Value Type='DateTime'>" 
-      + formattedDate + "</Value></Eq> <Eq><FieldRef Name='Assign' /><Value Type='Person or Group'>"
-      + this.state.user + "</Value></Eq> </And></Where><OrderBy><FieldRef Name='PlannedTime'/></OrderBy></Query></View>",
-  });
+
+  const search = await sp.web.lists.getByTitle("CheckIn CheckOut").getItemsByCAMLQuery({
+    ViewXml: "<View><Query><Where><And><Eq><FieldRef Name='Checkin' /><Value Type='DateTime'>" 
+    + formattedDate + "</Value></Eq> <Eq><FieldRef Name='UserName' /><Value Type='Person or Group'>"
+    + this.state.user + "</Value></Eq> </And></Where><OrderBy><FieldRef Name='Checkin'/></OrderBy></Query></View>",
+});
 
   console.log(search);
 
   //Get location details and dealer details from list
   for(let i = 0; i < search.length; i++)
   {
+
+    if(search[i].LogLocation != null || search[i].LogLocation != ''){
     
      count    =i+1+"";
+    // latitudeLongitude=dealer.latitude+","+dealer.longitude;
+     cooSplit = search[i].LogLocation.split(',');
    
     const dealer = await sp.web.lists.getByTitle("DealersData").items.getById(search[i].DealerNameId).get();
     //console.log(dealer);
 
     dealerName=dealer.dealer_name;
     dealerLocation=dealer.street;
-    
-    //co_ordinates=dealer.latitude,dealer.longitude;
-     latitudeLongitude=dealer.latitude+","+dealer.longitude;
-    cooSplit = latitudeLongitude.split(',');
-    
+   
     
   //locationDetails[i]={ "location":cooSplit, "option":{ color: 'red',text: count , description: item.Title }}
 
-  if(search[i].Status == null || search[i].Status == undefined)
+  if(search[i].LogType == "Check In")
   {
 
-    infoDescription="Time: "+search[i].PlanTime;
+    infoDescription=search[i].LogType+"<br/>"+"Time: "+moment(search[i].Checkin).format('H:mm:ss');
 
     //Change details to acceptable array format
 
   locationDetails[i]={ "location":cooSplit,  "addHandler":"mouseover", "infoboxOption": { title: dealerName, description: infoDescription }, "pushPinOption":{ color:"red",text: count , description: dealerLocation }}
 
 
-  //console.log(locationDetails);
-
   }
 
-  else{
+  else if(search[i].LogType == "Check Out"){
 
-    infoDescription="Time: "+search[i].PlanTime+"<br/>"+search[i].Status;
+    infoDescription=search[i].LogType+"<br/>"+"Time: "+moment(search[i].Checkout).format('H:mm:ss');
     
-
     //Change details to acceptable array format
 
     locationDetails[i]={ "location":cooSplit,  "addHandler":"mouseover", "infoboxOption": { title: dealerName, description: infoDescription }, "pushPinOption":{ color:"red",text: count , description: dealerLocation }}
-    
 
   }
+  //console.log(locationDetails);
+
+  else if(search[i].LogType == "Nil"){
+
+    infoDescription=search[i].LogType+"<br/>"+"Time: "+moment(search[i].Checkin).format('H:mm:ss');
+    
+    //Change details to acceptable array format
+
+    locationDetails[i]={ "location":cooSplit,  "addHandler":"mouseover", "infoboxOption": { title: dealerName, description: infoDescription }, "pushPinOption":{ color:"red",text: count , description: dealerLocation }}
+
+  }
+}
 
 
   }
@@ -331,11 +353,7 @@ export default class PlotLocations extends React.Component<IPlotLocationsProps,I
   
   if(locationDetails.length != 0)
   {
-
-
-    //console.log(locationDetails);
     
-
     this.setState({
       locationCoordinates:locationDetails,
       center: locationDetails[0].location
