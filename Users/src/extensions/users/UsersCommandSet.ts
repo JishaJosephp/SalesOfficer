@@ -26,6 +26,7 @@ export interface IUsersCommandSetProperties {
   sampleTextOne: string;
   sampleTextTwo: string;
   sourceRelativeUrl: string;
+  pagerelativeUrl:string;
 }
 
 const LOG_SOURCE: string = 'UsersCommandSet';
@@ -35,13 +36,15 @@ export default class UsersCommandSet extends BaseListViewCommandSet<IUsersComman
   @override
   public onInit(): Promise<void> {
     this.properties.sourceRelativeUrl = "/sites/SalesOfficerApplication/Lists/Users";
+    this.properties.pagerelativeUrl = "/sites/SalesOfficerApplication/SitePages/Users.aspx";
     var Libraryurl = this.context.pageContext.list.serverRelativeUrl;
+    let Pageurl = this.context.pageContext.site.serverRequestPath;
     Log.info(LOG_SOURCE, 'Initialized UsersCommandSet');
     sp.setup({
       spfxContext: this.context
     });
     this.panelPlaceHolder = document.body.appendChild(document.createElement("div"));
-    if ((Libraryurl == this.properties.sourceRelativeUrl) ) {
+    if ((Libraryurl == this.properties.sourceRelativeUrl) || (Pageurl == this.properties.pagerelativeUrl)) {
       
       setInterval(() => {
         $("button[name='New']").hide();
@@ -57,7 +60,8 @@ export default class UsersCommandSet extends BaseListViewCommandSet<IUsersComman
         $("button[name='Alert me']").hide();
         $("button[name='Manage my alerts']").hide();
         $("button[name='Select items']").hide();
-  
+        $("button[name='Export']").hide();
+        $("button[name='Integrate']").hide();
       }, 1);
 
     }
@@ -118,19 +122,22 @@ export default class UsersCommandSet extends BaseListViewCommandSet<IUsersComman
   }
   @override
   public onListViewUpdated(event: IListViewCommandSetListViewUpdatedParameters): void {
+    this.properties.sourceRelativeUrl = "/sites/SalesOfficerApplication/Lists/Users";
+    this.properties.pagerelativeUrl = "/sites/SalesOfficerApplication/SitePages/Users.aspx";
     var Libraryurl = this.context.pageContext.list.serverRelativeUrl;
+    let Pageurl = this.context.pageContext.site.serverRequestPath;
       const compareOneCommand: Command = this.tryGetCommand('COMMAND_1');
     const compareTwoCommand: Command = this.tryGetCommand('COMMAND_2');
-    compareTwoCommand.visible = (Libraryurl == this.properties.sourceRelativeUrl) ;
+    compareTwoCommand.visible = (Libraryurl == this.properties.sourceRelativeUrl) || (Pageurl == this.properties.pagerelativeUrl);
     if (compareOneCommand) {
-      compareOneCommand.visible = ((event.selectedRows.length === 1 && (Libraryurl == this.properties.sourceRelativeUrl)));
+      compareOneCommand.visible = ((event.selectedRows.length === 1 && (Pageurl == this.properties.pagerelativeUrl)) || (event.selectedRows.length === 1 && (Libraryurl == this.properties.sourceRelativeUrl)));
 
     }
     // if (compareOneCommand) {
     //   // This command should be hidden unless exactly one row is selected.
     //   compareOneCommand.visible = event.selectedRows.length === 1;
     // }
-    if ((Libraryurl == this.properties.sourceRelativeUrl) ) {
+    if ((Libraryurl == this.properties.sourceRelativeUrl) || (Pageurl == this.properties.pagerelativeUrl)) {
       setTimeout(() => {
         $("button[name='New']").hide();
         $("button[name='Copy link']").hide();
@@ -145,7 +152,8 @@ export default class UsersCommandSet extends BaseListViewCommandSet<IUsersComman
         $("button[name='Alert me']").hide();
         $("button[name='Manage my alerts']").hide();
         $("button[name='Select items']").hide();
-
+        $("button[name='Export']").hide();
+        $("button[name='Integrate']").hide();
       }, 1);
 
 
@@ -188,6 +196,8 @@ export default class UsersCommandSet extends BaseListViewCommandSet<IUsersComman
         UserNameId=item.usernameid;
         UserType=item.UserType;
 
+        const stateWebsiteId = await sp.web.lists.getByTitle("StateData").items.getById(selectedstate).get();
+
             const element: React.ReactElement<IUserCreateFormProps> = React.createElement(UserEditForm, assign({
                id: row.getValueByName('ID'),
                name:item.Title,
@@ -197,9 +207,9 @@ export default class UsersCommandSet extends BaseListViewCommandSet<IUsersComman
         email:item.EmailId,
         idtype:item.IDType,
         idnumber:item.IDNumber,
-        selectedstate:item.StateId,
+        selectedstate:stateWebsiteId.website_id,
         selecteddistrict:item.DistrictId,
-        UserNameId:item.usernameid,
+        UserNameId:item.UserNameId,
         UserType:item.UserType
               
                }));

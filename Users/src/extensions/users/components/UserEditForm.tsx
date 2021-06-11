@@ -7,6 +7,8 @@ import "@pnp/sp/sites";
 import "@pnp/sp/webs";
 import "@pnp/sp/lists";
 import "@pnp/sp/items";
+import * as _ from 'lodash';
+import { Dialog } from '@microsoft/sp-dialog';
 export interface IPeoplepickerdata {
     id: any;
     text: any;
@@ -62,7 +64,7 @@ export default class UserEditForm extends React.Component<IUserCreateFormProps, 
             agenum:props.agenum,
             email:props.email,
             usertype:props.UserType,
-            usernameid: props.UserNameId,
+            UserNameId: props.UserNameId,
             hidesales:true,
             setusername: "",
             mandatory:true
@@ -105,13 +107,13 @@ export default class UserEditForm extends React.Component<IUserCreateFormProps, 
                 });
             }
             
-            const stateitems: any[] = await sp.web.lists.getByTitle("States").items.select("Title,ID").getAll();
+            const stateitems: any[] = await sp.web.lists.getByTitle("StateData").items.select("ID,website_id,state").getAll();
             let statearray = [];
             for (let i = 0; i < stateitems.length; i++) {
     
                 let statedata = {
-                    key: stateitems[i].Id,
-                    text: stateitems[i].Title
+                    key: stateitems[i].ID,
+                    text: stateitems[i].state
                 };
                 statearray.push(statedata);
     
@@ -119,21 +121,41 @@ export default class UserEditForm extends React.Component<IUserCreateFormProps, 
             this.setState({
                 state: statearray
             });
-            const districtitems: any[] = await sp.web.lists.getByTitle("Districts").items.get();
-    // const districtitems: any[] = await sp.web.lists.getByTitle("Districts").items.select("Title,ID").getAll();
-    let districtarray = [];
-    for (let i = 0; i < districtitems.length; i++) {
-        if(districtitems[i].StateId == this.state.selectedstate){
-        let districtdata = {
-            key: districtitems[i].Id,
-            text: districtitems[i].Title
-        };
-        districtarray.push(districtdata);
-    }
-    }
-    this.setState({
-        district: districtarray
-    });
+            const items: any[] = await sp.web.lists.getByTitle("DistrictData").items.select("ID,district,website_id").filter(" state_id eq " + this.state.selectedstate).get();
+         console.log(items);
+
+         let sorted_District = [];
+         let filtereddistrict = [];
+         for (let i = 0; i < items.length; i++) {
+
+
+             let districtdata = {
+                 key: items[i].ID,
+                 text: items[i].district
+             };
+
+
+             filtereddistrict.push(districtdata);
+         }
+         sorted_District = _.orderBy(filtereddistrict, 'text', ['asc']);
+             this.setState({
+             district: sorted_District
+         });
+    //         const districtitems: any[] = await sp.web.lists.getByTitle("DistrictData").items.get();
+    // // const districtitems: any[] = await sp.web.lists.getByTitle("Districts").items.select("Title,ID").getAll();
+    // let districtarray = [];
+    // for (let i = 0; i < districtitems.length; i++) {
+    //     if(districtitems[i].StateId == this.state.selectedstate){
+    //     let districtdata = {
+    //         key: districtitems[i].ID,
+    //         text: districtitems[i].Title
+    //     };
+    //     districtarray.push(districtdata);
+    // }
+    // }
+    // this.setState({
+    //     district: districtarray
+    // });
     
         }
 
@@ -170,35 +192,44 @@ export default class UserEditForm extends React.Component<IUserCreateFormProps, 
         });
     }
     
-    const stateitems: any[] = await sp.web.lists.getByTitle("States").items.select("Title,ID").getAll();
+    const stateitems: any[] = await sp.web.lists.getByTitle("StateData").items.select("website_id,state").getAll();
     let statearray = [];
+    let sorted_State = [];
     for (let i = 0; i < stateitems.length; i++) {
 
         let statedata = {
-            key: stateitems[i].Id,
-            text: stateitems[i].Title
+            key: stateitems[i].website_id,
+            text: stateitems[i].state
         };
         statearray.push(statedata);
 
     }
+    sorted_State = _.orderBy(statearray, 'text', ['asc']);
     this.setState({
-        state: statearray
+        state: sorted_State
     });
-    const districtitems: any[] = await sp.web.lists.getByTitle("Districts").items.get();
-    // const districtitems: any[] = await sp.web.lists.getByTitle("Districts").items.select("Title,ID").getAll();
-    let districtarray = [];
-    for (let i = 0; i < districtitems.length; i++) {
-        if(districtitems[i].StateId == this.state.selectedstate){
-        let districtdata = {
-            key: districtitems[i].Id,
-            text: districtitems[i].Title
-        };
-        districtarray.push(districtdata);
-    }
-    }
-    this.setState({
-        district: districtarray
-    });
+    
+    const items: any[] = await sp.web.lists.getByTitle("DistrictData").items.select("ID,district,website_id").filter(" state_id eq " + this.state.selectedstate).get();
+        console.log(items);
+
+        let sorted_District = [];
+
+         let filtereddistrict = [];
+         for (let i = 0; i < items.length; i++) {
+
+
+             let districtdata = {
+                 key: items[i].website_id,
+                 text: items[i].district
+             };
+
+
+             filtereddistrict.push(districtdata);
+         }
+         sorted_District = _.orderBy(filtereddistrict, 'text', ['asc']);
+             this.setState({
+             district: sorted_District
+         });
 
 
     }
@@ -207,27 +238,24 @@ export default class UserEditForm extends React.Component<IUserCreateFormProps, 
         // let name = ((document.getElementById("name") as HTMLInputElement).value);
         // console.log(name);
         let list = sp.web.lists.getByTitle("Users");
-        console.log(this.state.name);
-        console.log(this.state.agenum);
-        console.log(this.state.permanentaddress);
-        console.log(this.state.mobnum);
-        console.log(this.state.email);
-        console.log(this.state.selectedstate);
-        console.log(this.state.selecteddistrict);
-        console.log(this.state.idtype);
-        console.log(this.state.idnumber);
-        console.log(this.state.usertype);
+   
         if(this.state.usertype == "Sales" ){
             if (this.state.name == "" || this.state.mobnum == "" || this.state.email == "" 
-            || this.state.usernameid == "" || this.state.usernameid == undefined || this.state.idnumber == ""
+            || this.state.UserNameId == "" || this.state.UserNameId == undefined || this.state.idnumber == ""
             || this.state.selectedstate == "" || this.state.selecteddistrict == ""||this.state.idtype == ""
             || this.state.usertype == "" || this.state.permanentaddress == "" || this.state.agenum == ""
             || this.agenoflag == 0 ||this.mobflag == 0||this.emailflag == 0){
                 this.setState({ mandatory: false });  
             }
             else{
-                let conf = confirm("Do you want to submit?");
-                if (conf == true) {
+                // let conf = confirm("Do you want to submit?");
+                // if (conf == true) {
+
+                    const stateId: any[] = await sp.web.lists.getByTitle("StateData").items.select("ID").filter(" website_id eq " + this.state.selectedstate).get();
+                    console.log(stateId);
+
+                    const districtId: any[] = await sp.web.lists.getByTitle("DistrictData").items.select("ID").filter(" website_id eq " + this.state.selecteddistrict).get();
+                    console.log(districtId);
 
                 // sp.web.lists.getByTitle("SalesUser").items.({
                     await list.items.getById(this.state.id).update({
@@ -237,15 +265,17 @@ export default class UserEditForm extends React.Component<IUserCreateFormProps, 
                         Address: this.state.permanentaddress,
                         ContactNumber: this.state.mobnum,
                         EmailId: this.state.email,
-                        DistrictId: this.state.selecteddistrict,
-                        StateId: this.state.selectedstate,
+                        DistrictId: districtId[0].ID,
+                        StateId:  stateId[0].ID,
                         IDType:this.state.idtype,
                         IDNumber:this.state.idnumber,
                        
 
                     });
+                    Dialog.alert("Updated successfully");
+
                     this._onCancel();
-                }
+               // }
             }
         }
         if(this.state.usertype == "Admin"){
@@ -256,8 +286,8 @@ export default class UserEditForm extends React.Component<IUserCreateFormProps, 
                 this.setState({ mandatory: false });  
             }
             else{
-                let conf = confirm("Do you want to submit?");
-                if (conf == true) {
+                // let conf = confirm("Do you want to submit?");
+                // if (conf == true) {
         
                     await list.items.getById(this.state.id).update({
         
@@ -267,8 +297,10 @@ export default class UserEditForm extends React.Component<IUserCreateFormProps, 
                         UserType:this.state.usertype
                         
                     });
+
+                    Dialog.alert("Updated successfully");
                     this.props.onClose();
-                }
+               // }
             }
         }
     }
@@ -325,24 +357,26 @@ export default class UserEditForm extends React.Component<IUserCreateFormProps, 
         console.log(option.key);
          this.setState({ selectedstate: option.key });
         // console.log(this.state.selectedstate);
-         const items: any[] = await sp.web.lists.getByTitle("Districts").items.select("Title,ID").filter(" StateId eq " + option.key).get();
-         console.log(items);
+        const items: any[] = await sp.web.lists.getByTitle("DistrictData").items.select("ID,district,website_id").filter(" state_id eq " + option.key).get();
+        console.log(items);
 
+        let sorted_District = [];
 
          let filtereddistrict = [];
          for (let i = 0; i < items.length; i++) {
 
 
              let districtdata = {
-                 key: items[i].Id,
-                 text: items[i].Title
+                 key: items[i].ID,
+                 text: items[i].district
              };
 
 
              filtereddistrict.push(districtdata);
          }
+         sorted_District = _.orderBy(filtereddistrict, 'text', ['asc']);
              this.setState({
-             district: filtereddistrict
+             district: sorted_District
          });
     }
     public districtChanged(option: { key: any; }) {

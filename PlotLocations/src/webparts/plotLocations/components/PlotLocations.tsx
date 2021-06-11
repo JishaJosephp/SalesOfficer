@@ -35,6 +35,7 @@ export interface IPlotLocationsState {
   officerSelected?   : { key: string | number | undefined };
   locationCoordinates: any[];
   selectedTeam:any;
+  siteurl: string;
   
  
 }
@@ -60,7 +61,8 @@ export default class PlotLocations extends React.Component<IPlotLocationsProps,I
       officerOptions      : [],
       officerSelected     : undefined,
       locationCoordinates :[],
-      selectedTeam: ""
+      selectedTeam: "",
+      siteurl:''
       
      
     };
@@ -76,11 +78,21 @@ export default class PlotLocations extends React.Component<IPlotLocationsProps,I
 
   public async componentDidMount() {
 
+    const rootwebData = await sp.site.rootWeb();
+    console.log(rootwebData);
+    var webValue = rootwebData.ResourcePath.DecodedUrl;
+    //alert(webValue);
+
+
     sp.web.currentUser.get().then((r) => {
 
-      this.setState({ user: r["Title"], userid: r["Id"] });
-      console.log(r["Title"]);
-      console.log(r["Id"]);
+      this.setState({ 
+        user: r["Title"],
+         userid: r["Id"],
+         siteurl: webValue 
+      });
+      // console.log(r["Title"]);
+      // console.log(r["Id"]);
 
   });
 
@@ -184,6 +196,42 @@ export default class PlotLocations extends React.Component<IPlotLocationsProps,I
     if(this.state.userGlobal == 1)
     {
 
+      //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ Add Dealers in map view
+
+    const searchDealer = await sp.web.lists.getByTitle("Route List").getItemsByCAMLQuery({
+      ViewXml: "<View><Query><Where><And><Eq><FieldRef Name='PlannedDateTime' /><Value Type='DateTime'>" 
+  + formattedDate + "</Value></Eq> <Eq><FieldRef Name='Assign' /><Value Type='Person or Group'>"
+  + this.state.selectedTeam + "</Value></Eq> </And></Where><OrderBy><FieldRef Name='PlannedDateTime'/></OrderBy></Query></View>",
+});
+
+  count="";
+  //Get selected Sales officers location details and dealer details from list
+  for(let i = 0; i < searchDealer.length; i++)
+  {
+    count    =i+1+"";
+
+    const dealer = await sp.web.lists.getByTitle("DealersData").items.getById(searchDealer[i].DealerNameId).get();
+    console.log(dealer);
+
+    dealerName=dealer.dealer_name;
+    dealerLocation=dealer.street;
+    
+    //co_ordinates=dealer.latitude,dealer.longitude;
+     latitudeLongitude=dealer.latitude+","+dealer.longitude;
+    cooSplit = latitudeLongitude.split(',');
+
+    // if(searchDealer[i].Status == null  || searchDealer[i].Status == undefined)
+    // {
+
+     // infoDescription="Planned Time: "+searchDealer[i].PlannedDateTime;
+
+                //let dealercount= search.length+i;
+
+    //Change details to acceptable array format
+    locationDetails[i]={ "location":cooSplit,  "addHandler":"click", "infoboxOption": { title: dealerName }, "pushPinOption":{color:"green",text: count , description: dealerLocation }}
+
+  }
+
 
   //Get selected sales officers route data correspoinding to Today's date
   
@@ -209,7 +257,7 @@ export default class PlotLocations extends React.Component<IPlotLocationsProps,I
     
     if(search[i].LogLocation != null || search[i].LogLocation != ''){
     
-    count    =i+1+"";
+    //count    =i+1+"";
 
     cooSplit = search[i].LogLocation.split(',');
 
@@ -222,12 +270,24 @@ export default class PlotLocations extends React.Component<IPlotLocationsProps,I
     //co_ordinates=dealer.latitude,dealer.longitude;
 
 
+    for (let j = 0; j < searchDealer.length; j++) {
+     
+      if(dealerName == locationDetails[j].infoboxOption.title)
+      {
+        count = j+1+"";
+      }
+      
+    }
+
+     let checkInOutCount= searchDealer.length+i;
+
+
     if(search[i].LogType == "Check In")
     {
       infoDescription=search[i].LogType+"<br/>"+"Time: "+moment(search[i].Checkin).format('H:mm:ss');
 
     //Change details to acceptable array format
-    locationDetails[i]={ "location":cooSplit,  "addHandler":"mouseover", "infoboxOption": { title: dealerName, description: infoDescription }, "pushPinOption":{color:"red",text: count , description: dealerLocation }}
+    locationDetails[checkInOutCount]={ "location":cooSplit,  "addHandler":"click", "infoboxOption": { title: dealerName, description: infoDescription }, "pushPinOption":{color:"red",text: count , description: dealerLocation }}
   
     }
   
@@ -237,7 +297,7 @@ export default class PlotLocations extends React.Component<IPlotLocationsProps,I
       infoDescription=search[i].LogType+"<br/>"+"Time: "+moment(search[i].Checkout).format('H:mm:ss');
 
      //Change details to acceptable array format
-      locationDetails[i]={ "location":cooSplit,  "addHandler":"mouseover", "infoboxOption": { title: dealerName, description: infoDescription }, "pushPinOption":{ color:"red",text: count , description: dealerLocation }}
+      locationDetails[checkInOutCount]={ "location":cooSplit,  "addHandler":"click", "infoboxOption": { title: dealerName, description: infoDescription }, "pushPinOption":{ color:"red",text: count , description: dealerLocation }}
   
     }
 
@@ -247,7 +307,7 @@ export default class PlotLocations extends React.Component<IPlotLocationsProps,I
       
       //Change details to acceptable array format
   
-      locationDetails[i]={ "location":cooSplit,  "addHandler":"mouseover", "infoboxOption": { title: dealerName, description: infoDescription }, "pushPinOption":{ color:"red",text: count , description: dealerLocation }}
+      locationDetails[checkInOutCount]={ "location":cooSplit,  "addHandler":"click", "infoboxOption": { title: dealerName, description: infoDescription }, "pushPinOption":{ color:"red",text: count , description: dealerLocation }}
   
     }
 
@@ -258,6 +318,7 @@ export default class PlotLocations extends React.Component<IPlotLocationsProps,I
 
   }
 
+//@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
   if(locationDetails.length != 0)
   {
@@ -320,7 +381,7 @@ export default class PlotLocations extends React.Component<IPlotLocationsProps,I
 
     //Change details to acceptable array format
 
-  locationDetails[i]={ "location":cooSplit,  "addHandler":"mouseover", "infoboxOption": { title: dealerName, description: infoDescription }, "pushPinOption":{ color:"red",text: count , description: dealerLocation }}
+  locationDetails[i]={ "location":cooSplit,  "addHandler":"click", "infoboxOption": { title: dealerName, description: infoDescription }, "pushPinOption":{ color:"red",text: count , description: dealerLocation }}
 
 
   }
@@ -331,7 +392,7 @@ export default class PlotLocations extends React.Component<IPlotLocationsProps,I
     
     //Change details to acceptable array format
 
-    locationDetails[i]={ "location":cooSplit,  "addHandler":"mouseover", "infoboxOption": { title: dealerName, description: infoDescription }, "pushPinOption":{ color:"red",text: count , description: dealerLocation }}
+    locationDetails[i]={ "location":cooSplit,  "addHandler":"click", "infoboxOption": { title: dealerName, description: infoDescription }, "pushPinOption":{ color:"red",text: count , description: dealerLocation }}
 
   }
   //console.log(locationDetails);
@@ -342,14 +403,68 @@ export default class PlotLocations extends React.Component<IPlotLocationsProps,I
     
     //Change details to acceptable array format
 
-    locationDetails[i]={ "location":cooSplit,  "addHandler":"mouseover", "infoboxOption": { title: dealerName, description: infoDescription }, "pushPinOption":{ color:"red",text: count , description: dealerLocation }}
+    locationDetails[i]={ "location":cooSplit,  "addHandler":"click", "infoboxOption": { title: dealerName, description: infoDescription }, "pushPinOption":{ color:"red",text: count , description: dealerLocation }}
 
   }
 }
 
 
   }
+//@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ Add Dealers in map view
 
+const searchDealer = await sp.web.lists.getByTitle("Route List").getItemsByCAMLQuery({
+  ViewXml: "<View><Query><Where><And><Eq><FieldRef Name='PlannedDateTime' /><Value Type='DateTime'>" 
++ formattedDate + "</Value></Eq> <Eq><FieldRef Name='Assign' /><Value Type='Person or Group'>"
++ this.state.user + "</Value></Eq> </And></Where><OrderBy><FieldRef Name='PlannedDateTime'/></OrderBy></Query></View>",
+});
+
+count="";
+//Get selected Sales officers location details and dealer details from list
+for(let i = 0; i < searchDealer.length; i++)
+{
+
+
+count    =i+1+"";
+
+const dealer = await sp.web.lists.getByTitle("DealersData").items.getById(searchDealer[i].DealerNameId).get();
+console.log(dealer);
+
+dealerName=dealer.dealer_name;
+dealerLocation=dealer.street;
+
+//co_ordinates=dealer.latitude,dealer.longitude;
+ latitudeLongitude=dealer.latitude+","+dealer.longitude;
+cooSplit = latitudeLongitude.split(',');
+
+
+// if(searchDealer[i].Status == null  || searchDealer[i].Status == undefined)
+// {
+
+ // infoDescription="Planned Time: "+searchDealer[i].PlannedDateTime;
+
+//Change details to acceptable array format
+let dealercount= search.length+i;
+locationDetails[dealercount]={ "location":cooSplit,  "addHandler":"click", "infoboxOption": { title: dealerName }, "pushPinOption":{color:"green",text: count , description: dealerLocation }}
+
+//  }
+
+//     else{
+
+
+//       infoDescription="Planned Time: "+search[i].PlanTime+"<br/>"+search[i].Status;
+
+//      //Change details to acceptable array format
+//       locationDetails[i]={ "location":cooSplit,  "addHandler":"mouseover", "infoboxOption": { title: dealerName, description: infoDescription }, "pushPinOption":{
+//  color:"red",text: count , description: dealerLocation }}
+
+//     }
+
+
+//locationDetails[i]={ "location":cooSplit, "option":{
+// color: 'red',text: count , description: item.Title }}
+
+}
+//@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
   
   if(locationDetails.length != 0)
   {
@@ -382,10 +497,18 @@ export default class PlotLocations extends React.Component<IPlotLocationsProps,I
   };
 
   public async goHome() {
-    
-    
-    window.location.href = window.location.href = "https://mrbutlers.sharepoint.com/sites/SalesOfficerApplication/SitePages/Sales-Officer.aspx";
 
+    if(this.state.userGlobal == 1)
+    {
+
+      window.location.href = window.location.href = this.state.siteurl+"/SitePages/Admin.aspx";
+
+    }
+
+    else{
+      window.location.href = window.location.href = this.state.siteurl+"/SitePages/Sales-Officer.aspx";
+
+    }
     
   }
 
@@ -474,7 +597,7 @@ export default class PlotLocations extends React.Component<IPlotLocationsProps,I
           icon: {color: 'white'},
           root: {
             marginLeft:"5px",
-            backgroundColor: '#498205',
+            backgroundColor: '#145cab',
             selectors: {
               ':hover .ms-Button-icon': {
                 color: 'white'
@@ -484,8 +607,8 @@ export default class PlotLocations extends React.Component<IPlotLocationsProps,I
               }
             }
           },
-          rootHovered: {backgroundColor: '#498205'},
-          rootPressed: {backgroundColor: '#498205'}
+          rootHovered: {backgroundColor: '#145cab'},
+          rootPressed: {backgroundColor: '#145cab'}
         }}
           
           />
@@ -496,7 +619,7 @@ export default class PlotLocations extends React.Component<IPlotLocationsProps,I
           icon: {color: 'white'},
           root: {
             marginLeft:"3px",
-            backgroundColor: '#498205',
+            backgroundColor: '#145cab',
             selectors: {
               ':hover .ms-Button-icon': {
                 color: 'white'
@@ -506,8 +629,8 @@ export default class PlotLocations extends React.Component<IPlotLocationsProps,I
               }
             }
           },
-          rootHovered: {backgroundColor: '#498205'},
-          rootPressed: {backgroundColor: '#498205'}
+          rootHovered: {backgroundColor: '#145cab'},
+          rootPressed: {backgroundColor: '#145cab'}
         }} />
 
        
@@ -571,7 +694,7 @@ export default class PlotLocations extends React.Component<IPlotLocationsProps,I
           icon: {color: 'white'},
           root: {
             marginLeft:"5px",
-            backgroundColor: '#498205',
+            backgroundColor: '#145cab',
             selectors: {
               ':hover .ms-Button-icon': {
                 color: 'white'
@@ -581,8 +704,8 @@ export default class PlotLocations extends React.Component<IPlotLocationsProps,I
               }
             }
           },
-          rootHovered: {backgroundColor: '#498205'},
-          rootPressed: {backgroundColor: '#498205'}
+          rootHovered: {backgroundColor: '#145cab'},
+          rootPressed: {backgroundColor: '#145cab'}
         }}
           
           />
@@ -593,7 +716,7 @@ export default class PlotLocations extends React.Component<IPlotLocationsProps,I
           icon: {color: 'white'},
           root: {
             marginLeft:"5px",
-            backgroundColor: '#498205',
+            backgroundColor: '#145cab',
             selectors: {
               ':hover .ms-Button-icon': {
                 color: 'white'
@@ -603,8 +726,8 @@ export default class PlotLocations extends React.Component<IPlotLocationsProps,I
               }
             }
           },
-          rootHovered: {backgroundColor: '#498205'},
-          rootPressed: {backgroundColor: '#498205'}
+          rootHovered: {backgroundColor: '#145cab'},
+          rootPressed: {backgroundColor: '#145cab'}
         }} />
         
          
