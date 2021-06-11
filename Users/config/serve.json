@@ -4,7 +4,7 @@
   "https": true,
   "serveConfigurations": {
     "default": {
-      "pageUrl": "https://mrbutlers.sharepoint.com/sites/SalesOfficerApplication/Lists/Users/AdminUsers.aspx",
+      "pageUrl": "https://ccstechnologies365.sharepoint.com/sites/SalesOfficerApplication/Lists/Users/AdminUsers.aspx",
       "customActions": {
         "375f4716-0e8d-4a3c-8d79-ce9929d321aa": {
           "location": "ClientSideExtension.ListViewCommandSet.CommandBar",
@@ -16,7 +16,7 @@
       }
     },
     "users": {
-      "pageUrl": "https://mrbutlers.sharepoint.com/sites/SalesOfficerApplication/Lists/Users/AdminUsers.aspx",
+      "pageUrl": "https://ccstechnologies365.sharepoint.com/sites/SalesOfficerApplication/Lists/Users/AdminUsers.aspx",
       "customActions": {
         "375f4716-0e8d-4a3c-8d79-ce9929d321aa": {
           "location": "ClientSideExtension.ListViewCommandSet.CommandBar",

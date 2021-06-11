@@ -9,6 +9,10 @@ import "@pnp/sp/lists";
 import "@pnp/sp/items";
 import "@pnp/sp/site-groups";
 import "@pnp/sp/site-users/web";
+import * as _ from 'lodash';
+import { Dialog } from '@microsoft/sp-dialog';
+// import TextField from '@material-ui/core/TextField';
+// import Autocomplete, { createFilterOptions } from '@material-ui/lab/Autocomplete';
 export interface IPeoplepickerdata {
     id: any;
     text: any;
@@ -74,19 +78,24 @@ export default class UserCreateForm extends React.Component<IUserCreateFormProps
     }
     public async componentDidMount() {
        
-        const stateitems: any[] = await sp.web.lists.getByTitle("States").items.select("Title,ID").getAll();
+        const stateitems: any[] = await sp.web.lists.getByTitle("StateData").items.select("ID,website_id,state").getAll();
         let statearray = [];
+        let sorted_State = [];
         for (let i = 0; i < stateitems.length; i++) {
 
             let statedata = {
-                key: stateitems[i].Id,
-                text: stateitems[i].Title
+                key: stateitems[i].website_id,
+                text: stateitems[i].state
             };
             statearray.push(statedata);
 
         }
+        console.log(statearray);
+        sorted_State = _.orderBy(statearray, 'text', ['asc']);
+        // _.orderBy(chars, 'name', 'asc');
+    
         this.setState({
-            state: statearray
+            state: sorted_State
         });
     
 
@@ -95,17 +104,7 @@ export default class UserCreateForm extends React.Component<IUserCreateFormProps
         // let name = ((document.getElementById("name") as HTMLInputElement).value);
         // console.log(name);
         this.setState({ mandatory: true });  
-        console.log(this.state.name);
-        console.log(this.state.agenum);
-        console.log(this.state.permanentaddress);
-        console.log(this.state.mobnum);
-        console.log(this.state.email);
-        console.log(this.state.selectedstate);
-        console.log(this.state.selecteddistrict);
-        console.log(this.state.idtype);
-        console.log(this.state.idnumber);
-        console.log(this.state.usertype);
-        console.log(this.state.usernameid);
+       
         if(this.state.usertype == "Sales" ){
             if (this.state.name == "" || this.state.mobnum == "" || this.state.email == "" 
             || this.state.usernameid == "" || this.state.usernameid == undefined || this.state.idnumber == ""
@@ -115,8 +114,15 @@ export default class UserCreateForm extends React.Component<IUserCreateFormProps
                 this.setState({ mandatory: false });  
             }
             else{
-                let conf = confirm("Do you want to submit?");
-                if (conf == true) {
+                // let conf = confirm("Do you want to submit?");
+                // if (conf == true) {
+
+                    const stateId: any[] = await sp.web.lists.getByTitle("StateData").items.select("ID").filter(" website_id eq " + this.state.selectedstate).get();
+                    console.log(stateId);
+
+                    const districtId: any[] = await sp.web.lists.getByTitle("DistrictData").items.select("ID").filter(" website_id eq " + this.state.selecteddistrict).get();
+                    console.log(districtId);
+
         
                     sp.web.lists.getByTitle("Users").items.add({
         
@@ -125,17 +131,19 @@ export default class UserCreateForm extends React.Component<IUserCreateFormProps
                         Address: this.state.permanentaddress,
                         ContactNumber: this.state.mobnum,
                         EmailId: this.state.email,
-                        DistrictId: this.state.selecteddistrict,
-                        StateId: this.state.selectedstate,
+                        DistrictId: districtId[0].ID,
+                        StateId: stateId[0].ID,
                         IDType:this.state.idtype,
                         IDNumber:this.state.idnumber,
                         UserType:this.state.usertype,
                         UserNameId: this.state.usernameid,
                         UserNamee:this.state.setusername
                     });
+
+                    Dialog.alert("Saved successfully");
                    
                         this._onCancel();
-                }
+                //}
             }
         }
         if(this.state.usertype == "Admin"){
@@ -146,8 +154,8 @@ export default class UserCreateForm extends React.Component<IUserCreateFormProps
                 this.setState({ mandatory: false });  
             }
             else{
-                let conf = confirm("Do you want to submit?");
-                if (conf == true) {
+                // let conf = confirm("Do you want to submit?");
+                // if (conf == true) {
         
                     sp.web.lists.getByTitle("Users").items.add({
         
@@ -172,8 +180,11 @@ export default class UserCreateForm extends React.Component<IUserCreateFormProps
                     //     });
                     // }
                     // catch{}
+
+                    Dialog.alert("Saved successfully");
+                    
                         this._onCancel();
-                }
+               // }
             }
         }
        
@@ -238,24 +249,25 @@ export default class UserCreateForm extends React.Component<IUserCreateFormProps
         console.log(option.key);
          this.setState({ selectedstate: option.key });
         // console.log(this.state.selectedstate);
-         const items: any[] = await sp.web.lists.getByTitle("Districts").items.select("Title,ID").filter(" StateId eq " + option.key).get();
+         const items: any[] = await sp.web.lists.getByTitle("DistrictData").items.select("ID,district,website_id").filter(" state_id eq " + option.key).get();
          console.log(items);
 
-
+         let sorted_District = [];
          let filtereddistrict = [];
          for (let i = 0; i < items.length; i++) {
 
 
              let districtdata = {
-                 key: items[i].Id,
-                 text: items[i].Title
+                 key: items[i].website_id,
+                 text: items[i].district
              };
 
 
              filtereddistrict.push(districtdata);
          }
+         sorted_District = _.orderBy(filtereddistrict, 'text', ['asc']);
              this.setState({
-             district: filtereddistrict
+             district: sorted_District
          });
     }
     public districtChanged(option: { key: any; }) {
@@ -317,7 +329,10 @@ export default class UserCreateForm extends React.Component<IUserCreateFormProps
     }
     public render(): React.ReactElement<IUserCreateFormProps> {
 
-        
+        // const filterOptions = createFilterOptions({
+        //     matchFrom: 'start'
+          
+        //   });
         // let { isOpen, currentTitle, onClose, dismissPanel } = this.props;
         const UserType: IDropdownOption[] = [
 
@@ -337,7 +352,10 @@ export default class UserCreateForm extends React.Component<IUserCreateFormProps
                         id="name" 
                         value={this.state.name} 
                         onChange={this._namechange} 
-                        ></TextField></p>
+                        ></TextField>
+                        
+                        </p>
+
                 <p><Label >Contact Number </Label>
                 < TextField id="mob" required={true}
                                 onChange={this._onmobchange} 
@@ -388,6 +406,14 @@ export default class UserCreateForm extends React.Component<IUserCreateFormProps
                             multiline  
                         ></TextField></p>
                 <Label >State</Label>
+                {/* <Autocomplete
+      id="combo-box-demo"
+      options={this.state.state.map((option) => option.district)}
+      filterOptions={filterOptions}
+      //getOptionLabel={(option) => option.title}
+      style={{ width: 300 }}
+      renderInput={(params) => <TextField {...params} label="Sales Team" variant="outlined" />}
+    /> */}
                 <Dropdown id="state" required={true}
                             placeholder="Select an option"
                             options={this.state.state}
