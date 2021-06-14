@@ -5,7 +5,7 @@ import { ICaptureOrderRequisitionProps } from './ICaptureOrderRequisitionProps';
 import { escape } from '@microsoft/sp-lodash-subset';
 import { IconButton, IIconProps, initializeIcons } from 'office-ui-fabric-react';
 import { Dropdown, DropdownMenuItemType, IDropdownOption, IDropdownProps, IDropdownStyles, } from 'office-ui-fabric-react/lib/Dropdown';
-import { TextField, DatePicker, DayOfWeek, IDatePickerStrings, mergeStyleSets, DefaultButton, Label, PrimaryButton, DialogFooter, Panel, Spinner, SpinnerType, PanelType, IPanelProps } from "office-ui-fabric-react";
+import { TextField, DatePicker, DayOfWeek, IDatePickerStrings, mergeStyleSets, DefaultButton, Label, PrimaryButton ,Button,ButtonType, Panel, Spinner, SpinnerType, PanelType, IPanelProps } from "office-ui-fabric-react";
 import { sp } from "@pnp/sp";
 import "@pnp/sp/sites";
 import "@pnp/sp/webs";
@@ -17,6 +17,7 @@ import "@pnp/sp/files";
 import "@pnp/sp/folders";
 import * as moment from 'moment';
 import { IEmailProperties } from '@pnp/sp/sputilities';
+import {Dialog, DialogType, DialogFooter} from 'office-ui-fabric-react/lib/Dialog'
 const DayPickerStrings: IDatePickerStrings = {
   months: [
     'January',
@@ -79,6 +80,9 @@ export interface ICaptureOrderRequisitionState {
   orderindex: IOrderindex;
   Product: any;
   dealer_website_id: any;
+  siteurl:any;
+  isOpen:boolean;
+  DialogeAlertContent:any;
 }
 
 export default class CaptureOrderRequisition extends React.Component<ICaptureOrderRequisitionProps, ICaptureOrderRequisitionState, {}> {
@@ -100,7 +104,11 @@ export default class CaptureOrderRequisition extends React.Component<ICaptureOrd
       orderindex: null,
       Product: "",
       CaptureOrderData: [],
-      dealer_website_id: ''
+      dealer_website_id: '',
+      siteurl:'',
+      isOpen:false,
+      DialogeAlertContent:''
+
 
     };
 
@@ -111,6 +119,13 @@ export default class CaptureOrderRequisition extends React.Component<ICaptureOrd
   private isAdd = "1";
 
   public async componentDidMount() {
+    const rootwebData = await sp.site.rootWeb();
+    console.log(rootwebData);
+    var webValue = rootwebData.ResourcePath.DecodedUrl;
+    //alert(webValue);
+    this.setState({
+      siteurl: webValue
+    });
     var queryParms = new UrlQueryParameterCollection(window.location.href);
     var dealerIdParm = queryParms.getValue("dealerId");
     var routeIdParm = queryParms.getValue("RouteId");
@@ -174,6 +189,15 @@ export default class CaptureOrderRequisition extends React.Component<ICaptureOrd
     this.setState({ remarks: remarks });
 
   }
+ public timeout(delay: number) {
+    return new Promise( res => setTimeout(res, delay) );
+}
+open = () => this.setState({isOpen: true})
+
+close = () =>{ 
+  this.setState({isOpen: false,DialogeAlertContent:""})
+  window.location.href =this.state.siteurl +"/SitePages/Checkin-Checkout.aspx?dealerId="+this.state.dealerid+"&RouteId="+this.state.routeid+"&dealer_website_id="+this.state.dealer_website_id;
+} 
   public AddData = async () => {
     let batch = sp.web.createBatch();
     let list = sp.web.lists.getByTitle("Order List");
@@ -226,8 +250,10 @@ export default class CaptureOrderRequisition extends React.Component<ICaptureOrd
     "</p>";
     batch.execute().then(async res => {
       if (flag == 1) {
-        alert("Data Saved Successfully");
-
+       
+       
+      //  Dialog.alert("Data Saved Successfully");
+      //  await this.timeout(3000); //for 1 sec delay
         const emailProps: IEmailProperties = {
         From:fromemail,
         To: [captureheademail],
@@ -240,10 +266,12 @@ export default class CaptureOrderRequisition extends React.Component<ICaptureOrd
 
         await sp.utility.sendEmail(emailProps);
         console.log("Email Sent!");
-        window.location.href = "https://mrbutlers.sharepoint.com/sites/SalesOfficerApplication/SitePages/Checkin-Checkout.aspx?dealerId="+this.state.dealerid+"&RouteId="+this.state.routeid+"&dealer_website_id="+this.state.dealer_website_id;
+        this.setState({ isOpen: true ,DialogeAlertContent:"Data Saved Successfully"});
+       
       }
       else {
-        alert("Enter any data");
+        this.setState({ isOpen: true ,DialogeAlertContent:"Enter any data"});
+    //    Dialog.alert("Enter any data");
       }
     });
     // await batch.execute();
@@ -342,7 +370,7 @@ export default class CaptureOrderRequisition extends React.Component<ICaptureOrd
     this.setState({ CaptureOrderData: this.OrderData });
   }
   public async cancel() {
-    window.location.href = window.location.href = "https://mrbutlers.sharepoint.com/sites/SalesOfficerApplication/SitePages/Checkin-Checkout.aspx?dealerId=" + this.state.dealerid + "&RouteId=" + this.state.routeid + "&checkin=1" + "&dealer_website_id=" + this.state.dealer_website_id;;
+    window.location.href = this.state.siteurl+"/SitePages/Checkin-Checkout.aspx?dealerId=" + this.state.dealerid + "&RouteId=" + this.state.routeid + "&checkin=1" + "&dealer_website_id=" + this.state.dealer_website_id;;
   }
 
   public render(): React.ReactElement<ICaptureOrderRequisitionProps> {
@@ -401,8 +429,20 @@ export default class CaptureOrderRequisition extends React.Component<ICaptureOrd
             <td><PrimaryButton id="Cancel" style={{ width: "100px" }} text="Cancel" onClick={this.cancel} /></td>
           </tr>
         </table>
-
-
+        <Dialog
+          isOpen={this.state.isOpen}
+          type={DialogType.close}
+          onDismiss={this.close.bind(this)}
+         
+          subText={this.state.DialogeAlertContent}
+          isBlocking={false}
+          closeButtonAriaLabel='Close'
+        >
+        
+          <DialogFooter>
+            <Button buttonType={ButtonType.primary} onClick={this.close}>OK</Button>
+          </DialogFooter>
+        </Dialog>
 
       </div>
 

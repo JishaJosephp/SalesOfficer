@@ -5,8 +5,9 @@ import * as moment from 'moment';
 import { sp, Web, View, ContentType, Search } from "@pnp/sp/presets/all";
 import { escape } from '@microsoft/sp-lodash-subset';
 import { UrlQueryParameterCollection } from '@microsoft/sp-core-library';
+import {Dialog, DialogType} from 'office-ui-fabric-react/lib/Dialog'
 import { Dropdown, DropdownMenuItemType, IDropdownOption, IDropdownProps, IDropdownStyles, } from 'office-ui-fabric-react/lib/Dropdown';
-import { TextField, DatePicker, DayOfWeek, IDatePickerStrings, mergeStyleSets, DefaultButton, Label, PrimaryButton, DialogFooter, Panel, Spinner, SpinnerType, PanelType, IPanelProps } from "office-ui-fabric-react";
+import { TextField, DatePicker, DayOfWeek, IDatePickerStrings, mergeStyleSets, DefaultButton, Label, PrimaryButton, DialogFooter, Panel, Spinner, SpinnerType, PanelType, IPanelProps ,Button,ButtonType} from "office-ui-fabric-react";
 export interface IApprovalState {
   firstDayOfWeek?: DayOfWeek;
   hidebutton: boolean;
@@ -20,7 +21,9 @@ export interface IApprovalState {
   selectedmin: any;
   commentError: any;
   isdisable: boolean;
-
+  siteurl:any;
+  isOpen:boolean;
+  DialogeAlertContent:any;
 }
 const DayPickerStrings: IDatePickerStrings = {
   months: [
@@ -64,7 +67,10 @@ export default class RouteApproval extends React.Component<IRouteApprovalProps, 
       selectedhour: '',
       selectedmin: '',
       commentError: '',
-      isdisable: false
+      isdisable: false,
+      siteurl:'',
+      isOpen:false,
+      DialogeAlertContent:''
 
     }
     this.handleSubmitButton = this.handleSubmitButton.bind(this);
@@ -72,8 +78,21 @@ export default class RouteApproval extends React.Component<IRouteApprovalProps, 
 
   private Actionitems: IDropdownOption[] = [];
   public async componentDidMount() {
+    const rootwebData = await sp.site.rootWeb();
+    console.log(rootwebData);
+    var webValue = rootwebData.ResourcePath.DecodedUrl;
+    //alert(webValue);
+    this.setState({
+      siteurl: webValue
+    });
     await this.BindApprovalForm();
   }
+  open = () => this.setState({isOpen: true})
+
+close = () =>{ 
+  this.setState({isOpen: false,DialogeAlertContent:""})
+  window.location.href =this.state.siteurl+'/';
+}
   public async BindApprovalForm() {
     var queryParms = new UrlQueryParameterCollection(window.location.href);
     var itemID = queryParms.getValue("ItemID");
@@ -171,9 +190,9 @@ export default class RouteApproval extends React.Component<IRouteApprovalProps, 
         Title:"1"
       });
     }
-    alert("Data Saved Successfully");
-
-    window.location.href = 'https://mrbutlers.sharepoint.com/sites/SalesOfficerApplication/';
+   // Dialog.alert("Data Saved Successfully");
+    this.setState({ isOpen: true ,DialogeAlertContent:"Data Saved Successfully"});
+   
   }
 
 
@@ -220,7 +239,7 @@ export default class RouteApproval extends React.Component<IRouteApprovalProps, 
   }
   public handleCancelButton() {
 
-    window.location.href = 'https://mrbutlers.sharepoint.com/sites/SalesOfficerApplication/';
+    window.location.href =this.state.siteurl+ '/';
   }
   private ChangeId = (item: IDropdownOption): void => {
     this.setState({
@@ -357,6 +376,20 @@ export default class RouteApproval extends React.Component<IRouteApprovalProps, 
 
 
             </div>
+            <Dialog
+          isOpen={this.state.isOpen}
+          type={DialogType.close}
+          onDismiss={this.close.bind(this)}
+         
+          subText={this.state.DialogeAlertContent}
+          isBlocking={false}
+          closeButtonAriaLabel='Close'
+        >
+        
+          <DialogFooter>
+            <Button buttonType={ButtonType.primary} onClick={this.close}>OK</Button>
+          </DialogFooter>
+        </Dialog>
           </div>
         </div>
       </div>
