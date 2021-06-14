@@ -12,6 +12,7 @@ import GridListTileBar from '@material-ui/core/GridListTileBar';
 import ListSubheader from '@material-ui/core/ListSubheader';
 import { colors } from '@material-ui/core';
 import { confirmAlert } from 'react-confirm-alert'; // Import
+import {Dialog, DialogType, DialogFooter} from 'office-ui-fabric-react/lib/Dialog'
 
 import 'react-confirm-alert/src/react-confirm-alert.css'
 import {
@@ -22,7 +23,8 @@ import {
   DefaultButton,
   Label,
   PrimaryButton,
-  DialogFooter, Fabric
+   Fabric,
+   Button,ButtonType
 } from "office-ui-fabric-react";
 export interface IPlannedDealerViewState {
 
@@ -30,13 +32,20 @@ export interface IPlannedDealerViewState {
   userid: any;
   plannedDealing: any[];
   SelectDate: any;
+  siteurl:any;
+  isOpen:boolean;
+  DialogeAlertContent:any;
+  PageRedirection:any;
+  urlparameter:any;
 }
 
 let userGlobal = 0;
 const groupByFields: IGrouping[] = [
   {
     name: "PlannedDateFormatted",
-    order: GroupOrder.ascending
+    order: GroupOrder.ascending,
+   
+    
   }
 ];
 export const viewFields: IViewField[] = [{
@@ -49,6 +58,14 @@ export const viewFields: IViewField[] = [{
   maxWidth: 150
 },
 {
+  name: "PlanTime",
+  displayName: "Time",
+  isResizable: true,
+  sorting: true,
+  minWidth: 60,
+  maxWidth: 60
+},
+{
   name: "Status",
   displayName: "Status",
   isResizable: true,
@@ -56,14 +73,7 @@ export const viewFields: IViewField[] = [{
   minWidth: 60,
   maxWidth: 60
 },
- {
-  name: "PlannedDateTime",
-  displayName: "Planned Date",
-  isResizable: true,
-  sorting: true,
-  minWidth: 150,
-  maxWidth: 150
-},
+ 
 {
   name: "Location",
   displayName: "Location",
@@ -71,14 +81,7 @@ export const viewFields: IViewField[] = [{
   sorting: true,
   minWidth: 150,
   maxWidth: 150
-}, {
-  name: "Remarks",
-  displayName: "Remarks",
-  isResizable: true,
-  sorting: true,
-  minWidth: 150,
-  maxWidth: 150
-},
+}
 
 ];
 export default class PlannedDealerView extends React.Component<IPlannedDealerViewProps, IPlannedDealerViewState, any> {
@@ -89,7 +92,12 @@ export default class PlannedDealerView extends React.Component<IPlannedDealerVie
       user: '',
       userid: '',
       plannedDealing: [],
-      SelectDate: ''
+      SelectDate: '',
+      siteurl:'',
+      isOpen:false,
+      DialogeAlertContent:'',
+      PageRedirection:'',
+      urlparameter:''
     };
 
     this.getDetails = this.getDetails.bind(this);
@@ -99,9 +107,17 @@ export default class PlannedDealerView extends React.Component<IPlannedDealerVie
     // this.Chekin        =this.Chekin.bind(this);
   }
   public async componentDidMount() {
+    const rootwebData = await sp.site.rootWeb();
+    console.log(rootwebData);
+    var webValue = rootwebData.ResourcePath.DecodedUrl;
+    //alert(webValue);
+    this.setState({
+      siteurl: webValue
+    });
     await this.getDetails();
   }
   private async _getSelection(items: any[]) {
+   // alert(this.state.siteurl);
     console.log(items);
     let isCheckin=false;
     let isCheckins=false;
@@ -185,14 +201,35 @@ if(checkinData.length == 0 || !isCheckin)
     
     }
             if (checkinDatas.length == 0 || !isCheckins) {
-              let conf = confirm("Are you sure to move checkin page ?");
-              if (conf == true) {
+              this.setState({ isOpen: true ,DialogeAlertContent:"Are you sure to move checkin page?",PageRedirection:"1",urlparameter:"dealerId=" + items[0].DealerNameId + "&RouteId=" + items[0].Id + "&checkin=" + items[0].Checkin +"&dealer_website_id="+items[0].Minutes});
+              // confirmAlert({
+              // title:'Confirmation',
               
-                  window.location.href = "https://mrbutlers.sharepoint.com/sites/SalesOfficerApplication/SitePages/Checkin-Checkout.aspx?dealerId=" + items[0].DealerNameId + "&RouteId=" + items[0].Id + "&checkin=" + items[0].Checkin +"&dealer_website_id="+items[0].Minutes;
-              }
+              //   message: 'Are you sure to move checkin page?',
+              //   buttons: [
+              //     {
+              //       label: 'Yes',
+              //       onClick: () => 
+              //        window.location.href = this.state.siteurl+"/SitePages/Checkin-Checkout.aspx?dealerId=" + items[0].DealerNameId + "&RouteId=" + items[0].Id + "&checkin=" + items[0].Checkin +"&dealer_website_id="+items[0].Minutes
+              //     },
+              //     {
+              //       label: 'No',
+              //       onClick: () => ""
+              //     }
+              //   ]
+              // });
+
+          
+              // let conf = confirm("Are you sure to move checkin page ?");
+              // if (conf == true) {
+              
+              //     window.location.href = "https://mrbutlers.sharepoint.com/sites/SalesOfficerApplication/SitePages/Checkin-Checkout.aspx?dealerId=" + items[0].DealerNameId + "&RouteId=" + items[0].Id + "&checkin=" + items[0].Checkin +"&dealer_website_id="+items[0].Minutes;
+              // }
             }
     else{
-      alert("You are already checked into one dealer at this time. Try again after check out");
+      this.setState({ isOpen: true ,DialogeAlertContent:"You are already checked into one dealer at this time. Try again after check out"});
+     // alert("You are already checked into one dealer at this time. Try again after check out");
+    // Dialog.alert("You are already checked into one dealer at this time. Try again after check out");
     } 
           }
         }
@@ -203,26 +240,32 @@ if(checkinData.length == 0 || !isCheckin)
     else  if (items[0].Checkin == "0")
     {
       if (plannedData[0].DealerNameId == items[0].DealerNameId) {
-        window.location.href = "https://mrbutlers.sharepoint.com/sites/SalesOfficerApplication/SitePages/Checkin-Checkout.aspx?dealerId=" + items[0].DealerNameId + "&RouteId=" + items[0].Id + "&checkin=" + items[0].Checkin+"&dealer_website_id="+items[0].Minutes;
+        window.location.href = this.state.siteurl+"/SitePages/Checkin-Checkout.aspx?dealerId=" + items[0].DealerNameId + "&RouteId=" + items[0].Id + "&checkin=" + items[0].Checkin+"&dealer_website_id="+items[0].Minutes;
       }
     }
     else  if (items[0].Checkin == "2")
     {
-      alert("You are already checked out from this dealer");
+      this.setState({ isOpen: true ,DialogeAlertContent:"You are already checked out from this dealer"});
+     // Dialog.alert("You are already checked out from this dealer");
+     // alert("You are already checked out from this dealer");
     }
     }
     else {
       if (plannedData[0].DealerNameId == items[0].DealerNameId) {
-        window.location.href = "https://mrbutlers.sharepoint.com/sites/SalesOfficerApplication/SitePages/Checkin-Checkout.aspx?dealerId=" + items[0].DealerNameId + "&RouteId=" + items[0].Id + "&checkin=" + items[0].Checkin+"&dealer_website_id="+items[0].Minutes;
+        window.location.href = this.state.siteurl+"/SitePages/Checkin-Checkout.aspx?dealerId=" + items[0].DealerNameId + "&RouteId=" + items[0].Id + "&checkin=" + items[0].Checkin+"&dealer_website_id="+items[0].Minutes;
       }
       else {
-        alert("You are already checked into one dealer at this time. Try again after check out");
+        this.setState({ isOpen: true ,DialogeAlertContent:"You are already checked into one dealer at this time. Try again after check out"});
+      //  Dialog.alert("You are already checked into one dealer at this time. Try again after check out");
+       // alert("You are already checked into one dealer at this time. Try again after check out");
       }
     } 
   }
 }
 else{
-  alert("One officer already checked into this dealer at this time. Try again later");
+  this.setState({ isOpen: true ,DialogeAlertContent:"One officer already checked into this dealer at this time. Try again later"});
+  //Dialog.alert("One officer already checked into this dealer at this time. Try again later");
+ // alert("One officer already checked into this dealer at this time. Try again later");
 }
    
     console.log('Selected items:', items);
@@ -234,9 +277,19 @@ else{
   public searchData = async () => {
 
   }
-  public async cancel() {
-    window.location.href = window.location.href = "https://mrbutlers.sharepoint.com/sites/SalesOfficerApplication/SitePages/Sales-Officer.aspx";
-  }
+  // public async cancel() {
+  //   window.location.href = window.location.href = "https://mrbutlers.sharepoint.com/sites/SalesOfficerApplication/SitePages/Sales-Officer.aspx";
+  // }
+  open = () => this.setState({isOpen: true})
+
+  close = () =>{
+    if(this.state.PageRedirection=="1")
+    {
+      window.location.href = this.state.siteurl+"/SitePages/Checkin-Checkout.aspx?"+this.state.urlparameter;
+    }
+    
+    this.setState({isOpen: false,DialogeAlertContent:"",PageRedirection:"0"})
+  } 
   public async getDetails() {
 
     await sp.web.currentUser.get().then((r) => {
@@ -291,7 +344,7 @@ else{
       const dealer: any = await sp.web.lists.getByTitle("DealersData").items.getById(plannedData[i].DealerNameId).get();
       console.log(dealer.Title);
       plannedData[i].DistrictId = dealer.dealer_name;
-      plannedData[i].PlannedDateTime = moment(plannedData[i].PlannedDateTime).format("DD-MMM-YYYY HH:mm A");
+  //    plannedData[i].PlannedDateTime = moment(plannedData[i].PlannedDateTime).format("DD-MMM-YYYY HH:mm A");
       // const location: any = await sp.web.lists.getByTitle("Location").items.getById(plannedData[i].LocationId).get();
       // console.log(location.Title);
        plannedData[i].Minutes=dealer.website_id;   //Assign dealer website_id to Mintute(Not used this field in thi WP)
@@ -309,6 +362,7 @@ else{
 
 
   public render(): React.ReactElement<IPlannedDealerViewProps> {
+    
     const controlClass = mergeStyleSets({
 
       control: {
@@ -319,9 +373,12 @@ else{
       },
 
     });
+    
     return (
+      
       <div >
         <div className={styles.tableFixHead}>
+          <h2>Dealer Visit</h2>
           {/* <table><tr>
                      <td>
                  <DatePicker id="DueDate" style={{ width: '100%' }} 
@@ -347,9 +404,23 @@ else{
             groupByFields={groupByFields}
             viewFields={viewFields}
           />
+           <Dialog
+          isOpen={this.state.isOpen}
+          type={DialogType.close}
+          onDismiss={this.close.bind(this)}
+         
+          subText={this.state.DialogeAlertContent}
+          isBlocking={false}
+          closeButtonAriaLabel='Close'
+        >
+        
           <DialogFooter>
-          <PrimaryButton id="Cancel"  style={{ width: "150px"}} text="Go to Home" onClick={this.cancel} />
+            <Button buttonType={ButtonType.primary} onClick={this.close}>OK</Button>
           </DialogFooter>
+        </Dialog>
+          {/* <DialogFooter>
+          <PrimaryButton id="Cancel"  style={{ width: "150px"}} text="Go to Home" onClick={this.cancel} />
+          </DialogFooter> */}
          
           {/* <table className={styles.table2} id="plannedDealer" >
 <tr>
