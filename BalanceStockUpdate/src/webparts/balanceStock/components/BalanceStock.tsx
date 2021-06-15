@@ -86,15 +86,10 @@ isOpen:false,
 DialogeAlertContent:''
 
 };
-// this.productChanged = this.productChanged.bind(this);
 this.remarkschange = this.remarkschange.bind(this);
-// this.update = this.update.bind(this);
 this.cancel = this.cancel.bind(this);
 this.updateData = this.updateData.bind(this);
-
 this._balanceQuantityChange = this._balanceQuantityChange.bind(this);
-
-
 }
 
 private addBalance = [];
@@ -102,6 +97,7 @@ private isAdd = "1";
 private Balance = [];
 
 public async componentDidMount() {
+  //Get current site url
   const rootwebData = await sp.site.rootWeb();
   console.log(rootwebData);
   var webValue = rootwebData.ResourcePath.DecodedUrl;
@@ -185,30 +181,36 @@ balancedatalist: this.Balance,
 
 
 }
+//Remark change
 public remarkschange = (ev: React.FormEvent<HTMLInputElement>, remarks?: any) => {
 this.setState({ mandatory: true });
 this.setState({ remarks: remarks });
 
 }
+//Cancel click redirect to checkin page
 public async cancel() {
  window.location.href =this.state.siteurl +"/SitePages/Checkin-Checkout.aspx?dealerId=" + this.state.dealerId + "&RouteId=" + this.state.routeId + "&checkin=0"+"&dealer_website_id="+this.state.dealer_website_id;
 }
+//Alert open
 open = () => this.setState({isOpen: true})
-
+//Alert Close
 close = () =>{ 
   this.setState({isOpen: false,DialogeAlertContent:""})
   window.location.href = this.state.siteurl+"/SitePages/Checkin-Checkout.aspx?dealerId=" + this.state.dealerId + "&RouteId=" + this.state.routeId + "&checkin=0"+"&dealer_website_id="+this.state.dealer_website_id;
 
 } 
-
+//Not used
 public handleCheck(val) {
 return this.state.balancedatalist.some(item => (val === item.productid));
 }
+//Balanced quantity changed method(idx is current items index)
 public _balanceQuantityChange = idx => e => {
 this.setState({ mandatory: true,error: false });
 this.Balance = [...this.state.balancedatalist];
 let extension = /^[0-9]+$/;
+//Number validation
 if (e.target.value.match(extension)) {
+//Update current products data into the balance array
 this.Balance[idx] = ({
 productname: this.state.balancedatalist[idx].productname,
 productid: this.state.balancedatalist[idx].productid,
@@ -217,8 +219,6 @@ balanceid: this.state.balancedatalist[idx].balanceid,
 ErrorMessage: ""
 });
 } else {
-
-
 this.Balance[idx] = ({
 productname: this.state.balancedatalist[idx].productname,
 productid: this.state.balancedatalist[idx].productid,
@@ -233,24 +233,24 @@ this.setState({ error: true });
 this.setState({ balancedatalist: this.Balance });
 
 }
+//Update method
 public updateData = async () => {
 console.log(this.Balance);
 this.setState({ mandatory: true });
 let batch = sp.web.createBatch();
 let list = sp.web.lists.getByTitle("Balance Stock");
-
 const entityTypeFullName = await list.getListItemEntityTypeFullName();
 if (this.state.error == true) {
 // this.setState({ mandatory: false });
 }
-
 else {
 for (let i = 0; i < this.state.balancedatalist.length; i++) {
-
+//Add each product in a batch for updation
 await this.upsert(batch, this.state.balancedatalist[i].balanceStock, this.state.balancedatalist[i].balanceid, this.state.balancedatalist[i].productid, this.state.toDate, this.state.remarks, this.state.routeId, this.state.dealerId);
 }
+//Batch execute
 await batch.execute();
-
+//Refill Cylinder quantity updation for website
 let data = this.state.balancedatalist.filter((item) => item.productname == "Refill Cylinder");
 if(data.length > 0)
 {
@@ -270,9 +270,7 @@ if(data.length > 0)
        if(data.message==true )
        {
         this.setState({ isOpen: true ,DialogeAlertContent:"Balance Stock updated successfully and Refill Cylinder quantity updated in Website"});
-       // Dialog.alert("Balance Stock updated successfully and Refill Cylinder quantity updated in Website");
-        // alert("Balance Stock updated successfully and Refill Cylinder quantity updated in Website")
-       }
+}
            })
           .catch((error) => {
                    console.log(error);
@@ -284,14 +282,13 @@ if(data.length > 0)
 else
 {
   this.setState({ isOpen: true ,DialogeAlertContent:"Balance Stock updated successfully"});
- // Dialog.alert("Balance Stock updated successfully");
- // alert("Balance Stock updated successfully");
 }
 
 }
 }
+//Add/Update method
 private async upsert(batch, balanceStock, balanceid, productid, toDate, remarks, routeid, dealerid) {
-
+//Add batch for new quantity
 if (balanceid == 0) {
 
 sp.web.lists.getByTitle("Balance Stock").items.inBatch(batch).add({
@@ -305,8 +302,8 @@ RouteId: routeid
 
 });
 }
+//Update batch for exiting quantity
 else {
-
 sp.web.lists.getByTitle("Balance Stock").items.inBatch(batch).getById(balanceid).update({
 Title: balanceStock,
 ProductNameId: productid,
