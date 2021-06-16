@@ -10,7 +10,6 @@ import "@pnp/sp/items";
 import "@pnp/sp/site-groups";
 import "@pnp/sp/site-users/web";
 import * as _ from 'lodash';
-import { Dialog } from '@microsoft/sp-dialog';
 // import TextField from '@material-ui/core/TextField';
 // import Autocomplete, { createFilterOptions } from '@material-ui/lab/Autocomplete';
 export interface IPeoplepickerdata {
@@ -84,7 +83,7 @@ export default class UserCreateForm extends React.Component<IUserCreateFormProps
         for (let i = 0; i < stateitems.length; i++) {
 
             let statedata = {
-                key: stateitems[i].website_id,
+                key: stateitems[i].ID,
                 text: stateitems[i].state
             };
             statearray.push(statedata);
@@ -104,7 +103,17 @@ export default class UserCreateForm extends React.Component<IUserCreateFormProps
         // let name = ((document.getElementById("name") as HTMLInputElement).value);
         // console.log(name);
         this.setState({ mandatory: true });  
-       
+        console.log(this.state.name);
+        console.log(this.state.agenum);
+        console.log(this.state.permanentaddress);
+        console.log(this.state.mobnum);
+        console.log(this.state.email);
+        console.log(this.state.selectedstate);
+        console.log(this.state.selecteddistrict);
+        console.log(this.state.idtype);
+        console.log(this.state.idnumber);
+        console.log(this.state.usertype);
+        console.log(this.state.usernameid);
         if(this.state.usertype == "Sales" ){
             if (this.state.name == "" || this.state.mobnum == "" || this.state.email == "" 
             || this.state.usernameid == "" || this.state.usernameid == undefined || this.state.idnumber == ""
@@ -114,15 +123,8 @@ export default class UserCreateForm extends React.Component<IUserCreateFormProps
                 this.setState({ mandatory: false });  
             }
             else{
-                // let conf = confirm("Do you want to submit?");
-                // if (conf == true) {
-
-                    const stateId: any[] = await sp.web.lists.getByTitle("StateData").items.select("ID").filter(" website_id eq " + this.state.selectedstate).get();
-                    console.log(stateId);
-
-                    const districtId: any[] = await sp.web.lists.getByTitle("DistrictData").items.select("ID").filter(" website_id eq " + this.state.selecteddistrict).get();
-                    console.log(districtId);
-
+                let conf = confirm("Do you want to submit?");
+                if (conf == true) {
         
                     sp.web.lists.getByTitle("Users").items.add({
         
@@ -131,19 +133,17 @@ export default class UserCreateForm extends React.Component<IUserCreateFormProps
                         Address: this.state.permanentaddress,
                         ContactNumber: this.state.mobnum,
                         EmailId: this.state.email,
-                        DistrictId: districtId[0].ID,
-                        StateId: stateId[0].ID,
+                        DistrictId: this.state.selecteddistrict,
+                        StateId: this.state.selectedstate,
                         IDType:this.state.idtype,
                         IDNumber:this.state.idnumber,
                         UserType:this.state.usertype,
                         UserNameId: this.state.usernameid,
                         UserNamee:this.state.setusername
                     });
-
-                    Dialog.alert("Saved successfully");
                    
                         this._onCancel();
-                //}
+                }
             }
         }
         if(this.state.usertype == "Admin"){
@@ -154,8 +154,8 @@ export default class UserCreateForm extends React.Component<IUserCreateFormProps
                 this.setState({ mandatory: false });  
             }
             else{
-                // let conf = confirm("Do you want to submit?");
-                // if (conf == true) {
+                let conf = confirm("Do you want to submit?");
+                if (conf == true) {
         
                     sp.web.lists.getByTitle("Users").items.add({
         
@@ -180,11 +180,8 @@ export default class UserCreateForm extends React.Component<IUserCreateFormProps
                     //     });
                     // }
                     // catch{}
-
-                    Dialog.alert("Saved successfully");
-                    
                         this._onCancel();
-               // }
+                }
             }
         }
        
@@ -258,7 +255,7 @@ export default class UserCreateForm extends React.Component<IUserCreateFormProps
 
 
              let districtdata = {
-                 key: items[i].website_id,
+                 key: items[i].ID,
                  text: items[i].district
              };
 

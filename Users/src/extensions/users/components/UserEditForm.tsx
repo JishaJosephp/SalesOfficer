@@ -8,7 +8,6 @@ import "@pnp/sp/webs";
 import "@pnp/sp/lists";
 import "@pnp/sp/items";
 import * as _ from 'lodash';
-import { Dialog } from '@microsoft/sp-dialog';
 export interface IPeoplepickerdata {
     id: any;
     text: any;
@@ -219,7 +218,7 @@ export default class UserEditForm extends React.Component<IUserCreateFormProps, 
 
 
              let districtdata = {
-                 key: items[i].website_id,
+                 key: items[i].ID,
                  text: items[i].district
              };
 
@@ -238,7 +237,17 @@ export default class UserEditForm extends React.Component<IUserCreateFormProps, 
         // let name = ((document.getElementById("name") as HTMLInputElement).value);
         // console.log(name);
         let list = sp.web.lists.getByTitle("Users");
-   
+        console.log(this.state.name);
+        console.log(this.state.agenum);
+        console.log(this.state.permanentaddress);
+        console.log(this.state.mobnum);
+        console.log(this.state.email);
+        console.log(this.state.selectedstate);
+        console.log(this.state.selecteddistrict);
+        console.log(this.state.idtype);
+        console.log(this.state.idnumber);
+        console.log(this.state.usertype);
+        console.log(this.state.usernameid);
         if(this.state.usertype == "Sales" ){
             if (this.state.name == "" || this.state.mobnum == "" || this.state.email == "" 
             || this.state.UserNameId == "" || this.state.UserNameId == undefined || this.state.idnumber == ""
@@ -248,14 +257,8 @@ export default class UserEditForm extends React.Component<IUserCreateFormProps, 
                 this.setState({ mandatory: false });  
             }
             else{
-                // let conf = confirm("Do you want to submit?");
-                // if (conf == true) {
-
-                    const stateId: any[] = await sp.web.lists.getByTitle("StateData").items.select("ID").filter(" website_id eq " + this.state.selectedstate).get();
-                    console.log(stateId);
-
-                    const districtId: any[] = await sp.web.lists.getByTitle("DistrictData").items.select("ID").filter(" website_id eq " + this.state.selecteddistrict).get();
-                    console.log(districtId);
+                let conf = confirm("Do you want to submit?");
+                if (conf == true) {
 
                 // sp.web.lists.getByTitle("SalesUser").items.({
                     await list.items.getById(this.state.id).update({
@@ -265,17 +268,15 @@ export default class UserEditForm extends React.Component<IUserCreateFormProps, 
                         Address: this.state.permanentaddress,
                         ContactNumber: this.state.mobnum,
                         EmailId: this.state.email,
-                        DistrictId: districtId[0].ID,
-                        StateId:  stateId[0].ID,
+                        DistrictId: this.state.selecteddistrict,
+                        StateId: this.state.selectedstate,
                         IDType:this.state.idtype,
                         IDNumber:this.state.idnumber,
                        
 
                     });
-                    Dialog.alert("Updated successfully");
-
                     this._onCancel();
-               // }
+                }
             }
         }
         if(this.state.usertype == "Admin"){
@@ -286,8 +287,8 @@ export default class UserEditForm extends React.Component<IUserCreateFormProps, 
                 this.setState({ mandatory: false });  
             }
             else{
-                // let conf = confirm("Do you want to submit?");
-                // if (conf == true) {
+                let conf = confirm("Do you want to submit?");
+                if (conf == true) {
         
                     await list.items.getById(this.state.id).update({
         
@@ -297,10 +298,8 @@ export default class UserEditForm extends React.Component<IUserCreateFormProps, 
                         UserType:this.state.usertype
                         
                     });
-
-                    Dialog.alert("Updated successfully");
                     this.props.onClose();
-               // }
+                }
             }
         }
     }
