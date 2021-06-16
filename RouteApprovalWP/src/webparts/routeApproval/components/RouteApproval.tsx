@@ -189,12 +189,12 @@ export default class RouteApproval extends React.Component<IRouteApprovalProps, 
   }
   //Style change in button hover Submit
   public hover(): void {
-    document.getElementById("b1").style.backgroundColor = "#498205";
-    document.getElementById("b1").style.color = "white";
+    document.getElementById("b1").style.backgroundColor = "#145cab";
+    document.getElementById("b1").style.color = "black";
   }
   //Style change in button no hover Submit
   public nohover(): void {
-    document.getElementById("b1").style.backgroundColor = "white";
+    document.getElementById("b1").style.backgroundColor = "#145cab";
     document.getElementById("b1").style.color = "black";
   }
   //Hour change
@@ -213,12 +213,12 @@ export default class RouteApproval extends React.Component<IRouteApprovalProps, 
   }
   //Style change in button hover Cancel
   public hoverr(): void {
-    document.getElementById("b2").style.backgroundColor = "#498205";
-    document.getElementById("b2").style.color = "white";
+    document.getElementById("b2").style.backgroundColor = "#145cab";
+    document.getElementById("b2").style.color = "black";
   }
   //Style change in button no hover Cancel
   public nohoverr(): void {
-    document.getElementById("b2").style.backgroundColor = "white";
+    document.getElementById("b2").style.backgroundColor = "#145cab";
     document.getElementById("b2").style.color = "black";
   }
   //Canecel button redirection to home page
@@ -349,18 +349,23 @@ export default class RouteApproval extends React.Component<IRouteApprovalProps, 
 
                   </td> </tr>
               </table>
-              <DefaultButton id="b2" style={{ marginTop: '40px', float: "left", marginRight: "10px", backgroundColor: "white", borderRadius: "10px", border: "1px solid gray" }}
+              {/* <DefaultButton id="b2" style={{ marginTop: '40px', float: "left", marginRight: "10px", backgroundColor: "white", borderRadius: "10px", border: "1px solid gray" }}
                 onMouseOver={this.hoverr} onMouseLeave={this.nohoverr}
                 onClick={this.handleSubmitButton} disabled={this.state.isdisable}
               >
+                
                 Submit
-</DefaultButton >
-              <DefaultButton id="b1" style={{ marginTop: '40px', float: "left", backgroundColor: "white", borderRadius: "10px", border: "1px solid gray" }}
+</DefaultButton > */}
+<PrimaryButton text="Submit" id="b2" style={{ marginTop: '40px', float: "left", marginRight: "10px",  borderRadius: "10px", border: "1px solid gray" }}
+                 onClick={this.handleSubmitButton} disabled={this.state.isdisable} />
+              {/* <DefaultButton id="b1" style={{ marginTop: '40px', float: "left", backgroundColor: "white", borderRadius: "10px", border: "1px solid gray" }}
                 onMouseOver={this.hover} onMouseLeave={this.nohover}
                 onClick={this.handleCancelButton}
               >Cancel
-</DefaultButton >
-
+</DefaultButton > */}
+<PrimaryButton text="Cancel" id="b1" style={{ marginTop: '40px', float: "left", borderRadius: "10px", border: "1px solid gray" }}
+              
+                onClick={this.handleCancelButton} />
 
             </div>
             <Dialog

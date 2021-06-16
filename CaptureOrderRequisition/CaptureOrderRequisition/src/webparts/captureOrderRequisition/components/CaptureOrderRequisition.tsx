@@ -378,6 +378,7 @@ export default class CaptureOrderRequisition extends React.Component<ICaptureOrd
 
     return (
       <div style={{ minWidth: "100px", maxWidth: "395px" }}>
+        <h2 className={styles.heading}>New Order</h2>
         <table style={{ border: '1px solid #ddd', display: (this.state.CaptureOrderData.length == 0 ? 'none' : 'block'), width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <th style={{ border: '1px solid #ddd', padding: '4px', borderCollapse: 'collapse', textAlign: 'left' }}>Product</th>
