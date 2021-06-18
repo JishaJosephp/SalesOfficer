@@ -44,6 +44,7 @@ export default class UsersCommandSet extends BaseListViewCommandSet<IUsersComman
       spfxContext: this.context
     });
     this.panelPlaceHolder = document.body.appendChild(document.createElement("div"));
+    //Hide buttons on the rybbon
     if ((Libraryurl == this.properties.sourceRelativeUrl) || (Pageurl == this.properties.pagerelativeUrl)) {
       
       setInterval(() => {
@@ -67,6 +68,7 @@ export default class UsersCommandSet extends BaseListViewCommandSet<IUsersComman
     }
     return Promise.resolve();
   }
+  //New Panel
   public _showPanel() {
     this._renderPanelComponent({
       isOpen: true,
@@ -86,9 +88,6 @@ export default class UsersCommandSet extends BaseListViewCommandSet<IUsersComman
     const element: React.ReactElement<IUserCreateFormProps> = React.createElement(UserCreateForm, assign({
       onClose: null,
       paneltype: "",
-      //onClose: null,
-      // currentTitle: null,
-      // itemId: null,
       isOpen: false,
       context: this.context
       //  listId: null
@@ -97,15 +96,12 @@ export default class UsersCommandSet extends BaseListViewCommandSet<IUsersComman
 
     ReactDom.render(element, this.panelPlaceHolder);
   }
+  //Edit panel
   public _showEditPanel() {
     this._renderEditPanelComponent({
       isOpen: true,
-      // paneltype: "Medium",
-      //currentTitle,
-      //itemId,
       listId: this.context.pageContext.list.id.toString(),
       onClose: this._dismissEditPanel
-      //onClose: this._dismissPanel
     });
   }
   public _renderEditPanelComponent(props: any) {
@@ -122,6 +118,7 @@ export default class UsersCommandSet extends BaseListViewCommandSet<IUsersComman
   }
   @override
   public onListViewUpdated(event: IListViewCommandSetListViewUpdatedParameters): void {
+
     this.properties.sourceRelativeUrl = "/sites/SalesOfficerApplication/Lists/Users";
     this.properties.pagerelativeUrl = "/sites/SalesOfficerApplication/SitePages/Users.aspx";
     var Libraryurl = this.context.pageContext.list.serverRelativeUrl;
@@ -133,10 +130,6 @@ export default class UsersCommandSet extends BaseListViewCommandSet<IUsersComman
       compareOneCommand.visible = ((event.selectedRows.length === 1 && (Pageurl == this.properties.pagerelativeUrl)) || (event.selectedRows.length === 1 && (Libraryurl == this.properties.sourceRelativeUrl)));
 
     }
-    // if (compareOneCommand) {
-    //   // This command should be hidden unless exactly one row is selected.
-    //   compareOneCommand.visible = event.selectedRows.length === 1;
-    // }
     if ((Libraryurl == this.properties.sourceRelativeUrl) || (Pageurl == this.properties.pagerelativeUrl)) {
       setTimeout(() => {
         $("button[name='New']").hide();
@@ -155,7 +148,6 @@ export default class UsersCommandSet extends BaseListViewCommandSet<IUsersComman
         $("button[name='Export']").hide();
         $("button[name='Integrate']").hide();
       }, 1);
-
 
     }
   }
@@ -178,7 +170,7 @@ export default class UsersCommandSet extends BaseListViewCommandSet<IUsersComman
     let currentuserid;
     switch (event.itemId) {
       case 'COMMAND_1':
-        //Dialog.alert(`${this.properties.sampleTextOne}`);
+        //Get details of the selected item by it's ID and pass it to the interface
         if (event.selectedRows.length > 0) {
           event.selectedRows.forEach(async (row: RowAccessor, index: number) => {
             ItemIdfromlist = row.getValueByName('ID');

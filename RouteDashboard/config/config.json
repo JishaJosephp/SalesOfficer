@@ -1,0 +1,27 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/spfx-build/config.2.0.schema.json",
+  "version": "2.0",
+  "bundles": {
+    "route-dashboard-web-part": {
+      "components": [
+        {
+          "entrypoint": "./lib/webparts/routeDashboard/RouteDashboardWebPart.js",
+          "manifest": "./src/webparts/routeDashboard/RouteDashboardWebPart.manifest.json"
+        }
+      ]
+    },
+    "page-redirection-web-part": {
+      "components": [
+        {
+          "entrypoint": "./lib/webparts/pageRedirection/PageRedirectionWebPart.js",
+          "manifest": "./src/webparts/pageRedirection/PageRedirectionWebPart.manifest.json"
+        }
+      ]
+    }
+  },
+  "externals": {},
+  "localizedResources": {
+    "RouteDashboardWebPartStrings": "lib/webparts/routeDashboard/loc/{locale}.js",
+    "PageRedirectionWebPartStrings": "lib/webparts/pageRedirection/loc/{locale}.js"
+  }
+}
