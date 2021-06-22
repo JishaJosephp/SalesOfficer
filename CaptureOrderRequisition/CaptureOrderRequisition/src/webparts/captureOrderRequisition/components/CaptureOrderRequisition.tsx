@@ -5,7 +5,7 @@ import { ICaptureOrderRequisitionProps } from './ICaptureOrderRequisitionProps';
 import { escape } from '@microsoft/sp-lodash-subset';
 import { IconButton, IIconProps, initializeIcons } from 'office-ui-fabric-react';
 import { Dropdown, DropdownMenuItemType, IDropdownOption, IDropdownProps, IDropdownStyles, } from 'office-ui-fabric-react/lib/Dropdown';
-import { TextField, DatePicker, DayOfWeek, IDatePickerStrings, mergeStyleSets, DefaultButton, Label, PrimaryButton, DialogFooter, Panel, Spinner, SpinnerType, PanelType, IPanelProps } from "office-ui-fabric-react";
+import { TextField, DatePicker, DayOfWeek, IDatePickerStrings, mergeStyleSets, DefaultButton, Label, PrimaryButton, Button, ButtonType, Panel, Spinner, SpinnerType, PanelType, IPanelProps } from "office-ui-fabric-react";
 import { sp } from "@pnp/sp";
 import "@pnp/sp/sites";
 import "@pnp/sp/webs";
@@ -16,6 +16,8 @@ import { Web } from "@pnp/sp/webs";
 import "@pnp/sp/files";
 import "@pnp/sp/folders";
 import * as moment from 'moment';
+import { IEmailProperties } from '@pnp/sp/sputilities';
+import { Dialog, DialogType, DialogFooter } from 'office-ui-fabric-react/lib/Dialog'
 const DayPickerStrings: IDatePickerStrings = {
   months: [
     'January',
@@ -54,15 +56,15 @@ export interface IOrderindex {
 
 
 }
-export interface ICaptureOrderData{
+export interface ICaptureOrderData {
   productname: any;
   requiredquantity: any;
   requireddate: any;
-  productid:any;
-  ErrorMessage:any;
+  productid: any;
+  ErrorMessage: any;
 }
 export interface ICaptureOrderRequisitionState {
-  CaptureOrderData:ICaptureOrderData[];
+  CaptureOrderData: ICaptureOrderData[];
   Title: any;
   firstDayOfWeek?: DayOfWeek;
   productname: any;
@@ -77,8 +79,11 @@ export interface ICaptureOrderRequisitionState {
   dealerid: string,
   orderindex: IOrderindex;
   Product: any;
+  dealer_website_id: any;
+  siteurl: any;
+  isOpen: boolean;
+  DialogeAlertContent: any;
 }
-
 export default class CaptureOrderRequisition extends React.Component<ICaptureOrderRequisitionProps, ICaptureOrderRequisitionState, {}> {
   public constructor(props: ICaptureOrderRequisitionProps, state: ICaptureOrderRequisitionState) {
 
@@ -91,584 +96,278 @@ export default class CaptureOrderRequisition extends React.Component<ICaptureOrd
       requireddate: null,
       remarks: "",
       noDataError: '',
-      quantityError: '', 
+      quantityError: '',
       orderdatalist: [],
       routeid: "",
       dealerid: "",
       orderindex: null,
       Product: "",
-      CaptureOrderData:[]
-
+      CaptureOrderData: [],
+      dealer_website_id: '',
+      siteurl: '',
+      isOpen: false,
+      DialogeAlertContent: ''
     };
-    this.productChanged = this.productChanged.bind(this);
     this.cancel = this.cancel.bind(this);
   }
   private captureOrderData: ICaptureOrderData[] = [];
   private addOrder = [];
   private isAdd = "1";
- 
+
   public async componentDidMount() {
+    //Get site url
+    const rootwebData = await sp.site.rootWeb();
+    console.log(rootwebData);
+    var webValue = rootwebData.ResourcePath.DecodedUrl;
+    //alert(webValue);
+    this.setState({
+      siteurl: webValue
+    });
+    //get query string parameter
     var queryParms = new UrlQueryParameterCollection(window.location.href);
     var dealerIdParm = queryParms.getValue("dealerId");
     var routeIdParm = queryParms.getValue("RouteId");
-    this.setState({ dealerid: dealerIdParm, routeid: routeIdParm });
+    const dealer_website_id = queryParms.getValue('dealer_website_id');
+    this.setState({ dealerid: dealerIdParm, routeid: routeIdParm, dealer_website_id: dealer_website_id });
     let productarray = [];
+    //get product items
     const productitems: any[] = await sp.web.lists.getByTitle("Product").items.select("Title,ID").getAll();
     const orderData = await sp.web.lists.getByTitle("Order List").getItemsByCAMLQuery({
       ViewXml: "<View><Query><Where><And><Eq><FieldRef Name='Route' LookupId='TRUE' /><Value Type='Lookup'>"
-      + routeIdParm + "</Value></Eq> <Eq><FieldRef Name='Dealer' LookupId='TRUE' /><Value Type='Lookup'>"
-      + dealerIdParm + "</Value></Eq></And></Where></Query></View>",
-      });
-    console.log(orderData);
-
-  for (let i = 0; i < productitems.length; i++) {
-    if(orderData.length == 0)
-{
-    this.captureOrderData[i] = ({
-      productname: productitems[i].Title,
-      productid:  productitems[i].Id,
-      requiredquantity: "",
-      ErrorMessage:"",
-      requireddate:  new Date()
-
+        + routeIdParm + "</Value></Eq> <Eq><FieldRef Name='DealerName' LookupId='TRUE' /><Value Type='Lookup'>"
+        + dealerIdParm + "</Value></Eq></And></Where></Query></View>",
     });
-    
-  }
-  else{
-    let res = orderData.filter((item) => item.ProductNameId ==  productitems[i].ID)
-    if(res.length > 0)
-    {
-      this.captureOrderData[i] = ({
-        productname: productitems[i].Title,
-        productid:  productitems[i].Id,
-        requiredquantity:  res[0].Title,
-        requireddate:  new Date(res[0].RequiredDate),
-        ErrorMessage:""
-      });
+    console.log(orderData);
+    //Bind null value for each product
+    for (let i = 0; i < productitems.length; i++) {
+      if (orderData.length == 0) {
+        this.captureOrderData[i] = ({
+          productname: productitems[i].Title,
+          productid: productitems[i].Id,
+          requiredquantity: "",
+          ErrorMessage: "",
+          requireddate: new Date()
+
+        });
+      }
+      //Bind corresponding order data for each product
+      else {
+        let res = orderData.filter((item) => item.ProductNameId == productitems[i].ID)
+        if (res.length > 0) {
+          this.captureOrderData[i] = ({
+            productname: productitems[i].Title,
+            productid: productitems[i].Id,
+            requiredquantity: res[0].Title,
+            requireddate: new Date(res[0].RequiredDate),
+            ErrorMessage: ""
+          });
+          this.setState({ remarks: res[0].Remarks });
+        }
+        else {
+          this.captureOrderData[i] = ({
+            productname: productitems[i].Title,
+            productid: productitems[i].Id,
+            requiredquantity: "",
+            ErrorMessage: "",
+            requireddate: new Date()
+          });
+        }
+      }
     }
-    
-    
-  }
-}
     this.setState({
       productoption: productarray,
       CaptureOrderData: this.captureOrderData
     });
-
-
-
-    // const orderData = await sp.web.lists.getByTitle("Order List").getItemsByCAMLQuery({
-    //   ViewXml: "<View><Query><Where><And><Eq><FieldRef Name='DealerId' LookupId='True' /><Value Type='Lookup'>"
-    //   + routeIdParm + "</Value></Eq> <Eq><FieldRef Name='RouteId' /><Value Type='Lookup'>"
-    //   + dealerIdParm + "</Value></Eq> </And></Where></Query></View>",
-    //   });
-     
-      // for(let i = 0; i < orderData.length; i++)
-      // {
-      //   let data = productitems.filter((item) => item.ID ==  orderData[i].ProductNameId).map(({Title,ID}) => ({Title,ID}));
-      //   console.log(data)
-      //   this.addOrder.push({
-      //     Title: orderData[i].Title,
-      //     ProductNameId: orderData[i].ProductNameId,
-      //     RequiredDate:moment(orderData[i].RequiredDate).format("DD MMM YYYY") ,
-      //     DateCaptured:  orderData[i].DateCaptured,
-      //     Remarks:  orderData[i].Remarks,
-      //     RouteId: orderData[i].RouteId,
-      //     DealerId:  orderData[i].DealerId,
-      //     Product:   data[0].Title,
-      //     date:orderData[i].RequiredDate, //moment(orderData[i].RequiredDate).format("DD/MM/YYYY"),
-      //     ID:  orderData[i].ID,
-      //     reqDatepickerValue:moment(orderData[i].RequiredDate).format("DD/MM/YYYY") ,//moment(orderData[i].RequiredDate).format("DD/MM/YYYY")
-      //   });
-      // }
-      // this.setState({
-      //   orderdatalist: this.addOrder,
-      // });
+    console.log(this.state.remarks);
   }
-  public productChanged(option: { key: any; text: any }) {
-    //console.log(option.key);
-    this.setState({ productname: option.key, Product: option.text, noDataError: "" });
-    console.log(this.state.productname,);
-  }
-
-  public _onrequiredquantitychange = (event: React.FormEvent<HTMLInputElement | HTMLTextAreaElement>, newValue?: string) => {
-
-    //alert(newValue);
-    this.setState({  quantityError: "",requiredquantity: newValue });
-
-
-  }
-  public _onrequireddateChange = (date?: Date): void => {
-    this.setState({ requireddate: date });
-
-
-  }
-
+  //Remarks added
   public remarkschange = (ev: React.FormEvent<HTMLInputElement>, remarks?: any) => {
 
     this.setState({ remarks: remarks });
 
   }
-  public update = async () => {
-
-    this.setState({
-      quantityError: "",
-      noDataError: ""
-    });
-    let today = new Date();
-    let currentDate = moment(today).format("DD MMM YYYY");
-    console.log(currentDate);
-
-    let Requireddate = moment(this.state.requireddate, 'DD/MM/YYYY').format("DD MMM YYYY");
-    console.log(Requireddate);
-    let reqDate=this.state.requireddate;
-    if ((this.state.requiredquantity == undefined || this.state.requiredquantity == null || this.state.requiredquantity == "")
-      && (this.state.productname == undefined || this.state.productname == null || this.state.productname == "")
-      && (this.state.remarks == undefined || this.state.remarks == null || this.state.remarks == "")
-      && (Requireddate == undefined || Requireddate == null || Requireddate == "Invalid date")
-
-    ) {
-
-      return this.setState({
-        noDataError: "Fill Details"
-      });
-
-    }
-    else if ((this.state.requiredquantity % 1) != 0) {
-      console.log("Not ");
-      return this.setState({
-        quantityError: "Enter a valid number"
-      });
-
-    }
-    else if (parseInt(this.state.requiredquantity) <= 0) {
-      console.log("Not ");
-      return this.setState({
-        quantityError: "Enter a valid number"
-      });
-
-    }
-    //   else if(this.handleCheck(this.state.productname,this.state.requireddate) == true){
-    //    return this.setState({
-    //     noDataError: "Already added this product"
-    //   });
-    // }
-    else {
-      let quantity=this.state.requiredquantity;
-      let ProductNameId=this.state.productname;
-      sp.web.lists.getByTitle("Order List").items.getById(parseInt(this.state.orderindex.Id)).update({
-        Title: this.state.requiredquantity,
-        ProductNameId:this.state.productname,
-        RequiredDate: Requireddate,
-        DateCaptured: currentDate,
-        Remarks: this.state.remarks,
-        RouteId: this.state.routeid,
-        DealerId: this.state.dealerid
-      });//.then(i => {
-      //   console.log(i);
-        this.addOrder[this.state.orderindex.index] = ({
-          Title: this.state.requiredquantity,
-          ProductNameId: this.state.productname,
-          RequiredDate: Requireddate,
-          DateCaptured: currentDate,
-          Remarks: this.state.remarks,
-          RouteId: this.state.routeid,
-          DealerId: this.state.dealerid,
-          Product: this.state.Product,
-          date: reqDate,
-          ID: this.state.orderindex.Id,
-          reqDatepickerValue: moment(reqDate, 'DD/MM/YYYY').format("DD/MM/YYYY")
-          // Title: i.data.Title,
-          // ProductNameId: i.data.ProductNameId,
-          // RequiredDate: Requireddate,
-          // DateCaptured: currentDate,
-          // Remarks: i.data.Remarks,
-          // RouteId: this.state.routeid,
-          // DealerId: this.state.dealerid,
-          // Product: this.state.Product,
-          // date: reqDate,
-          // ID: newitemid,
-          // reqDatepickerValue: moment(reqDate, 'DD/MM/YYYY').format("DD/MM/YYYY")
-        
-        });
-        console.log(this.addOrder[this.state.orderindex.index]);
-        this.setState({
-          orderdatalist: this.addOrder,
-        });
-
-
-        //  window.location.href = "https://mrbutlers.sharepoint.com/sites/SalesOfficerApplication/SitePages/Checkin-Checkout.aspx";
-     // })
-
-
-    }
-    console.log("before clear");
-    console.log(this.addOrder);
-    this.setState({
-
-      productname: "",
-      requiredquantity: "",
-      requireddate: null,
-      remarks: "",
-      noDataError:'',
-      quantityError:'',   
-      orderindex:null
-
-        });
-        this.setState({
-            orderindex: {
-                Id: null,
-                index: null
-            }
-        });
-
-        console.log("after clear");
-        console.log(this.addOrder);
-        // this.setState({
-        //   orderdatalist: this.addOrder,
-        // });
-    //  this.setState({
-
-    //     productname: "",
-    //     requiredquantity: "",
-    //     requireddate: null,
-    //     remarks: "",
-    //     noDataError:'',
-    //     quantityError:'',   
-    //     orderindex:null
-
-    //       });
-    //       this.setState({
-    //           orderindex: {
-    //               Id: null,
-    //               index: null
-    //           }
-    //       });
-         
-    alert("Updated successfully");
-    this.isAdd = "1";
+  public timeout(delay: number) {
+    return new Promise(res => setTimeout(res, delay));
   }
-  public AddData = async () =>{
+  open = () => this.setState({ isOpen: true })
+  //ALert close
+  close = () => {
+    this.setState({ isOpen: false, DialogeAlertContent: "" })
+    window.location.href = this.state.siteurl + "/SitePages/Checkin-Checkout.aspx?dealerId=" + this.state.dealerid + "&RouteId=" + this.state.routeid + "&dealer_website_id=" + this.state.dealer_website_id;
+  }
+  //new order method
+  public AddData = async () => {
     let batch = sp.web.createBatch();
     let list = sp.web.lists.getByTitle("Order List");
-   
     let today = new Date();
     let currentDate = moment(today).format("DD MMM YYYY");
+    let headid;
+    let captureheademail;
+    let captureheadname;
     const entityTypeFullName = await list.getListItemEntityTypeFullName()
-let flag=0;
-    
-    for(let i = 0; i < this.state.CaptureOrderData.length; i++)
-    {
+    let flag = 0;
+    let user = await sp.web.currentUser();
+    console.log(user);
+    let fromemail = user.Email;
+    let salesofficer = user.Title;
+    let order = "";
+    let dealername = "";
+    let remark = "";
+    let dealerid = parseInt(this.state.dealerid);
+    const dealeritems = await sp.web.lists.getByTitle("DealersData").items.getById(dealerid).get();
+    console.log(dealeritems);
+    dealername = dealeritems.dealer_name;
+    //Sales head email from settings list for new order mail sending
+    const captureHead = await sp.web.lists.getByTitle("Settings List").getItemsByCAMLQuery({
+      ViewXml: "<View><Query><Where><Eq><FieldRef Name='ValueType' /><Value Type='Choice'>Capture Order</Value></Eq></Where></Query></View>",
+    });
+    headid = captureHead[0].HeadId;
+    const users = await sp.web.siteUsers();
+    for (let i = 0; i < users.length; i++) {
+      if (users[i].Id == headid) {
+
+        captureheademail = users[i].Email;
+        captureheadname = users[i].Title;
+      }
+    }
+    console.log(this.state.CaptureOrderData);
+    for (let i = 0; i < this.state.CaptureOrderData.length; i++) {
       let Requireddate = moment(this.state.CaptureOrderData[i].requireddate, 'DD/MM/YYYY').format("DD MMM YYYY");
-      if(this.state.CaptureOrderData[i].requiredquantity !="")
-      {
-      await this.upsert(batch,this.state.CaptureOrderData[i].requiredquantity,this.state.CaptureOrderData[i].productid,Requireddate,currentDate,this.state.remarks,this.state.routeid,this.state.dealerid)
-      flag=1;
-     }
+      if (this.state.CaptureOrderData[i].requiredquantity != "") {
+        await this.upsert(batch, this.state.CaptureOrderData[i].requiredquantity, this.state.CaptureOrderData[i].productid, Requireddate, currentDate, this.state.remarks, this.state.routeid, this.state.dealerid)
+        flag = 1;
+        order = order + "<tr><td>" + this.state.CaptureOrderData[i].productname + "</td><td></td><td>" + this.state.CaptureOrderData[i].requiredquantity + "</td><td></td><td>" + Requireddate + "</td></tr>"
+        remark = this.state.remarks;
+      }
     }
-    batch.execute().then(res => {
-      if(flag==1)
-      {
-      alert("Data Saved Successfully");
-      }
-      else
-      {
-        alert("Enter any data");
-      }
-    });
-    // await batch.execute();
-    // console.log("Done");
-  }
-  public Add = async () => {
-    this.setState({
-      quantityError: "",
-      noDataError: ""
-    });
-
-    let today = new Date();
-    let currentDate = moment(today).format("DD MMM YYYY");
-    console.log(currentDate);
-
-    let Requireddate = moment(this.state.requireddate, 'DD/MM/YYYY').format("DD MMM YYYY");
-    console.log(Requireddate);
-let reqDate=this.state.requireddate;
-    if ((this.state.requiredquantity == undefined || this.state.requiredquantity == null || this.state.requiredquantity == "")
-      && (this.state.productname == undefined || this.state.productname == null || this.state.productname == "")
-      && (this.state.remarks == undefined || this.state.remarks == null || this.state.remarks == "")
-      && (Requireddate == undefined || Requireddate == null || Requireddate == "Invalid date")
-
-    ) {
-
-      return this.setState({
-        noDataError: "Fill Details"
-      });
-
-    }
-    else if ((this.state.requiredquantity % 1) != 0) {
-        console.log("Not ");
-        return this.setState({
-          quantityError: "Enter a valid number"
-        });
-
-      }
-      else if (parseInt(this.state.requiredquantity) <= 0) {
-        console.log("Not ");
-        return this.setState({
-          quantityError: "Enter a valid number"
-        });
-
-      } else if ((this.state.requiredquantity % 1) != 0) {
-        console.log("Not ");
-        return this.setState({
-          quantityError: "Enter a valid number"
-        });
-
-      }
-      else if (parseInt(this.state.requiredquantity) <= 0) {
-        console.log("Not ");
-        return this.setState({
-          quantityError: "Enter a valid number"
-        });
-
-      }
-        else if(this.handleCheck(this.state.productname,this.state.requireddate) == true){
-         return this.setState({
-          noDataError: "Already added this product"
-        });
+    let mailMessage = "<p><table><tr><th>Product Name</th><th></th><th>Quantity</th><th></th><th>Required Date</th></tr>" + order + "</table></p>";
+    let MailBody = "<p>Hi " + captureheadname +
+      ",</p><p>A new requirement has been purchased from <b>" + dealername +
+      "</b> by " + salesofficer +
+      " on " + currentDate + "</p><p><table><tr><td>Remarks</td><td>:</td><td>" + remark +
+      "</td></tr></table></p><p>" + mailMessage +
+      "</p>";
+    batch.execute().then(async res => {
+      //Email sent for sales head
+      if (flag == 1) {
+        const emailProps: IEmailProperties = {
+          From: fromemail,
+          To: [captureheademail],
+          Subject: "Order Information",
+          Body: MailBody,
+          AdditionalHeaders: {
+            "content-type": "text/html"
+          }
+        };
+        await sp.utility.sendEmail(emailProps);
+        console.log("Email Sent!");
+        this.setState({ isOpen: true, DialogeAlertContent: "Data Saved Successfully" });
       }
       else {
-       
-      sp.web.lists.getByTitle("Order List").items.add({
-        Title: this.state.requiredquantity,
-        ProductNameId: this.state.productname,
-        RequiredDate: Requireddate,
-        DateCaptured: currentDate,
-        Remarks: this.state.remarks,
-        RouteId: this.state.routeid,
-        DealerId: this.state.dealerid
-      }).then(i => {
-        let newitemid = i.data.ID;
-        if (newitemid != undefined) {
-          this.addOrder.push({
-            Title: i.data.Title,
-            ProductNameId: i.data.ProductNameId,
-            RequiredDate: Requireddate,
-            DateCaptured: currentDate,
-            Remarks: i.data.Remarks,
-            RouteId: this.state.routeid,
-            DealerId: this.state.dealerid,
-            Product: this.state.Product,
-            date: reqDate,
-            ID: newitemid,
-            reqDatepickerValue: moment(reqDate, 'DD/MM/YYYY').format("DD/MM/YYYY")
-
-            // Title: this.state.requiredquantity,
-            // ProductNameId: this.state.productname,
-            // RequiredDate: Requireddate,
-            // DateCaptured: currentDate,
-            // Remarks: this.state.remarks,
-            // RouteId: this.state.routeid,
-            // DealerId: this.state.dealerid,
-            // Product: this.state.Product,
-            // date: this.state.requireddate,
-            // ID: newitemid,
-            // reqDatepickerValue: moment(this.state.requireddate, 'DD/MM/YYYY').format("DD/MM/YYYY")
-          });
-          this.setState({
-            orderdatalist: this.addOrder,
-          });
-        }
-
-        //  window.location.href = "https://mrbutlers.sharepoint.com/sites/SalesOfficerApplication/SitePages/Checkin-Checkout.aspx";
-      })
-
-    }
-    
-
-
-     this.setState({
-
-        productname: "",
-        requiredquantity: "",
-        requireddate: null,
-        remarks: "",
-        noDataError:'',
-        quantityError:'',   
-        orderindex:null
-
-          });
-          this.setState({
-              orderindex: {
-                  Id: null,
-                  index: null
-              }
-          });
-
-  }
-  handleCheck(val,date) {
-    var Fdate= moment(this.state.requireddate, 'DD/MM/YYYY').format("DD/MM/YYYY")
-    return this.state.orderdatalist.some(item => (val === item.ProductNameId)&&(Fdate ===item.reqDatepickerValue));
-}
-  public DeleteOrderdatalist = async (data) => {
-    if (confirm('Are you sure you want to delete the data?')) {
-      //  alert(data.ID);
-      this.addOrder = this.state.orderdatalist;
-      const items = this.addOrder.filter(item => item !== data);
-      this.addOrder = items;
-
-      this.setState({ orderdatalist: this.addOrder });
-      let item = await sp.web.lists.getByTitle("Order List").items.getById(data.ID).delete();
-      this.setState({
-        Title: '',
-        productname: "",
-        requiredquantity: "",
-        requireddate: null,
-        remarks: "",
-        noDataError: '',
-        quantityError: '',
-
-        Product: "",
-        orderindex: null
-
-      });
-      this.setState({
-        orderindex: {
-          Id: null,
-          index: null
-        }
-      });
-    }
-  }
-  public EditOrderdatalist = async (item) => {
-    this.isAdd = "0";
-    console.log(item);
-    var index = this.state.orderdatalist.indexOf(item);
-
-    let orderindex: IOrderindex;
-    orderindex = {
-      Id: item.ID,
-      index: index
-    };
-    //const dateformat     = moment(item.date).format("DD-MM-YYYY");;// moment(item.date).format("YYYY-MM-DDT12:00:00Z");
-   const dateformats = new Date(item.date)
-    this.setState({ orderindex: orderindex });
-    this.setState({
-      requiredquantity: item.Title,
-      productname: item.ProductNameId,
-      requireddate:dateformats ,
-      remarks: item.Remarks,
-      routeid: item.RouteId,
-      dealerid: item.DealerId,
-      Product: item.Product
-
-
+        this.setState({ isOpen: true, DialogeAlertContent: "Enter any data" });
+      }
     });
   }
   private OrderData = [];
+  //Quantity change
   public progressplannedchange = (e, i) => {
-this.OrderData = [...this.state.CaptureOrderData];
-    if (parseInt(e.target.value) <= 0) {
+    this.OrderData = [...this.state.CaptureOrderData];
+    if (parseInt(e.target.value) < 0) {
       console.log("Not ");
-      
-    this.OrderData[i] = ({
-      productname: this.state.CaptureOrderData[i].productname,
+
+      this.OrderData[i] = ({
+        productname: this.state.CaptureOrderData[i].productname,
         requiredquantity: "",
         requireddate: this.state.CaptureOrderData[i].requireddate,
-        productid:this.state.CaptureOrderData[i].productid,
-        ErrorMessage:"Enter a valid number"
-    });
-    return this.setState({ CaptureOrderData: this.OrderData });
+        productid: this.state.CaptureOrderData[i].productid,
+        ErrorMessage: "Enter a valid number"
+      });
+      return this.setState({ CaptureOrderData: this.OrderData });
 
     } else if ((e.target.value % 1) != 0) {
       console.log("Not ");
       this.OrderData[i] = ({
         productname: this.state.CaptureOrderData[i].productname,
-          requiredquantity: "",
-          requireddate: this.state.CaptureOrderData[i].requireddate,
-          productid:this.state.CaptureOrderData[i].productid,
-          ErrorMessage:"Enter a valid number"
+        requiredquantity: "",
+        requireddate: this.state.CaptureOrderData[i].requireddate,
+        productid: this.state.CaptureOrderData[i].productid,
+        ErrorMessage: "Enter a valid number"
       });
       return this.setState({ CaptureOrderData: this.OrderData });
 
     }
-    else{
-  
-    this.OrderData[i] = ({
-      productname: this.state.CaptureOrderData[i].productname,
+    else {
+
+      this.OrderData[i] = ({
+        productname: this.state.CaptureOrderData[i].productname,
         requiredquantity: e.target.value,
         requireddate: this.state.CaptureOrderData[i].requireddate,
-        productid:this.state.CaptureOrderData[i].productid,
-        ErrorMessage:""
+        productid: this.state.CaptureOrderData[i].productid,
+        ErrorMessage: ""
+      });
+      this.setState({ CaptureOrderData: this.OrderData });
+    }
+  }
+  //Get order data of each product
+  private getOrders(productname) {
+    const orderData = sp.web.lists.getByTitle("Order List").getItemsByCAMLQuery({
+      ViewXml: "<View><Query><Where><And><And><Eq><FieldRef Name='Route' LookupId='TRUE' /><Value Type='Lookup'>"
+        + this.state.routeid + "</Value></Eq><Eq><FieldRef Name='DealerName' LookupId='TRUE' /><Value Type='Lookup'>"
+        + this.state.dealerid + "</Value></Eq></And><Eq><FieldRef Name='ProductName' LookupId='TRUE' /><Value Type='Lookup'>"
+        + productname + "</Value></Eq></And></Where></Query></View>",
+    });
+    console.log(orderData);
+    return orderData;
+  }
+  //Batch updation
+  private async upsert(batch, quantity, productname, Requireddate, currentDate, remarks, routeid, dealerid) {
+    const listdata = await this.getOrders(productname);
+    if (listdata.length == 0) {
+      sp.web.lists.getByTitle("Order List").items.inBatch(batch).add(this.createOrderObject(quantity, productname, Requireddate, currentDate, remarks, routeid, dealerid)
+      );
+    }
+    else {
+      var updateid;
+      listdata.forEach(async editid => {
+        updateid = editid.ID;
+      });
+      sp.web.lists.getByTitle("Order List").items.inBatch(batch).getById(updateid).update({
+        Title: quantity,
+        ProductNameId: productname,
+        RequiredDate: Requireddate,
+        DateCaptured: currentDate,
+        Remarks: remarks,
+        RouteId: routeid,
+        DealerNameId: dealerid
+      });
+    }
+  }
+  //Object for batch updation
+  private createOrderObject(quantity, productname, Requireddate, currentDate, remarks, routeid, dealerid) {
+    return {
+      Title: quantity,
+      ProductNameId: productname,
+      RequiredDate: Requireddate,
+      DateCaptured: currentDate,
+      Remarks: remarks,
+      RouteId: routeid,
+      DealerNameId: dealerid
+    };
+  }
+  //Date change update in order array
+  private _onSelectPlannedDate = (e, i) => {
+    this.OrderData = [...this.state.CaptureOrderData];
+    this.OrderData[i] = ({
+      productname: this.state.CaptureOrderData[i].productname,
+      requiredquantity: this.state.CaptureOrderData[i].requiredquantity,
+      requireddate: e,//moment(e).format("DD MMM YYYY") ,
+      productid: this.state.CaptureOrderData[i].productid
     });
     this.setState({ CaptureOrderData: this.OrderData });
   }
-}
-private getOrders(productname) {
-  // const orderData =  sp.web.lists.getByTitle("Order List").getItemsByCAMLQuery({
-  //   ViewXml: "<View><Query><Where><And><Eq><FieldRef Name='Route' LookupId='TRUE' /><Value Type='Lookup'>"
-  //   + this.state.routeid + "</Value></Eq><Eq><FieldRef Name='Dealer' LookupId='TRUE' /><Value Type='Lookup'>"
-  //   + this.state.dealerid + "</Value></Eq></And></Where></Query></View>",
-  //   });
-  // const orderData =  sp.web.lists.getByTitle("Order List").getItemsByCAMLQuery({
-  //   ViewXml: "<View><Query><Where><And><And><Eq><FieldRef Name='Route' LookupId='TRUE' /><Value Type='Lookup'>"
-  //   + this.state.routeid + "</Value></Eq><And><Eq><FieldRef Name='Dealer' LookupId='TRUE' /><Value Type='Lookup'>"
-  //   + this.state.dealerid + "</Value></Eq></And></And></Where></Query></View>",
-  //   });
-
-  const orderData =  sp.web.lists.getByTitle("Order List").getItemsByCAMLQuery({
-    ViewXml: "<View><Query><Where><And><And><Eq><FieldRef Name='Route' LookupId='TRUE' /><Value Type='Lookup'>"
-       + this.state.routeid + "</Value></Eq><Eq><FieldRef Name='Dealer' LookupId='TRUE' /><Value Type='Lookup'>"
-       + this.state.dealerid + "</Value></Eq></And><Eq><FieldRef Name='ProductName' LookupId='TRUE' /><Value Type='Lookup'>"
-      + productname + "</Value></Eq></And></Where></Query></View>",
-  });
-  console.log(orderData);
-  return orderData;
-}
-private async upsert(batch,quantity, productname, Requireddate,currentDate , remarks, routeid, dealerid) {
-  const listdata = await this.getOrders(productname);
-  if (listdata.length == 0) {
-    sp.web.lists.getByTitle("Order List").items.inBatch(batch).add(this.createOrderObject(quantity, productname, Requireddate, currentDate, remarks, routeid, dealerid)
-    );
-  }
-  else {
-    var updateid;
-    listdata.forEach(async editid => {
-      updateid = editid.ID;
-    });
-    sp.web.lists.getByTitle("Order List").items.inBatch(batch).getById(updateid).update({
-      Title: quantity,
-    ProductNameId: productname,
-    RequiredDate: Requireddate,
-    DateCaptured: currentDate,
-    Remarks: remarks,
-    RouteId: routeid,
-    DealerId:dealerid
-    });
-  }
-}
-private createOrderObject(quantity, productname, Requireddate, currentDate, remarks, routeid, dealerid) {
-  return {
-    Title: quantity,
-    ProductNameId: productname,
-    RequiredDate: Requireddate,
-    DateCaptured: currentDate,
-    Remarks: remarks,
-    RouteId: routeid,
-    DealerId:dealerid
-  };
-}
-private _onSelectPlannedDate = (e, i) => {
-  this.OrderData = [...this.state.CaptureOrderData];
-  this.OrderData[i] = ({
-    productname: this.state.CaptureOrderData[i].productname,
-    requiredquantity: this.state.CaptureOrderData[i].requiredquantity,
-    requireddate:e,//moment(e).format("DD MMM YYYY") ,
-    productid:this.state.CaptureOrderData[i].productid
-  });
-  this.setState({ CaptureOrderData: this.OrderData });
-}
+  //Cancel redirect to checkin page
   public async cancel() {
- window.location.href = window.location.href = "https://mrbutlers.sharepoint.com/sites/SalesOfficerApplication/SitePages/Checkin-Checkout.aspx?dealerId=" + this.state.dealerid + "&RouteId=" + this.state.routeid + "&checkin=1";;
+    window.location.href = this.state.siteurl + "/SitePages/Checkin-Checkout.aspx?dealerId=" + this.state.dealerid + "&RouteId=" + this.state.routeid + "&checkin=1" + "&dealer_website_id=" + this.state.dealer_website_id;;
   }
 
   public render(): React.ReactElement<ICaptureOrderRequisitionProps> {
@@ -678,116 +377,73 @@ private _onSelectPlannedDate = (e, i) => {
     const UpdateIcon: IIconProps = { iconName: 'Add' };
 
     return (
-      <div>
-        <table style={{ border: '1px solid #ddd'}}>
-                    <thead>
-                        <th style={{ textAlign: 'left' }}>Product</th>
-                        <th style={{  textAlign: 'left' }}>Quantity</th>
-                        <th style={{  textAlign: 'left' }}>Required Date</th>
-                      
-                    </thead>
-                    <tbody>
-                        {
+      <div style={{ minWidth: "100px", maxWidth: "395px" }}>
+        <h2 className={styles.heading}>New Order</h2>
+        <table style={{ border: '1px solid #ddd', display: (this.state.CaptureOrderData.length == 0 ? 'none' : 'block'), width: '100%', borderCollapse: 'collapse' }}>
+          <thead>
+            <th style={{ border: '1px solid #ddd', padding: '4px', borderCollapse: 'collapse', textAlign: 'left' }}>Product</th>
+            <th style={{ border: '1px solid #ddd', padding: '4px', borderCollapse: 'collapse', textAlign: 'left' }}>Quantity</th>
+            <th style={{ border: '1px solid #ddd', padding: '4px', borderCollapse: 'collapse', textAlign: 'left' }}>Required Date</th>
 
-                            this.state.CaptureOrderData.map((item, i) => {
-                                return <tr >
-                                    <td>
-                                        {this.state.CaptureOrderData[i].productname}
+          </thead>
+          <tbody >
+            {
+              this.state.CaptureOrderData.map((item, i) => {
+                return <tr style={{ backgroundColor: '#f2f2f2' }}>
+                  <td style={{ border: '1px solid #ddd', padding: '4px', borderCollapse: 'collapse' }}>
+                    {this.state.CaptureOrderData[i].productname}
 
-                                    </td>
-                                    
-                                    <td style={{ width: '15px' }}>
-                                        <TextField
-                                            onChange={(e) => this.progressplannedchange(e, i)}
-                                            value={this.state.CaptureOrderData[i].requiredquantity}
-                                            defaultValue={this.state.CaptureOrderData[i].requiredquantity}
-                                            errorMessage={this.state.CaptureOrderData[i].ErrorMessage}
-                                        ></TextField>
-                                    </td>
-                                    <td>
-                                        <DatePicker
+                  </td>
+                  <td style={{ border: '1px solid #ddd', padding: '4px', borderCollapse: 'collapse', width: '15px' }}>
+                    <TextField
+                      onChange={(e) => this.progressplannedchange(e, i)}
+                      value={this.state.CaptureOrderData[i].requiredquantity}
+                      defaultValue={this.state.CaptureOrderData[i].requiredquantity}
+                      errorMessage={this.state.CaptureOrderData[i].ErrorMessage}
+                    ></TextField>
+                  </td>
+                  <td style={{ border: '1px solid #ddd', padding: '4px', borderCollapse: 'collapse' }}>
+                    <DatePicker
 
-                                            onSelectDate={(e) => this._onSelectPlannedDate(e, i)}
-                                            placeholder="Select a date..."
-                                            ariaLabel="Select a date"
+                      onSelectDate={(e) => this._onSelectPlannedDate(e, i)}
+                      placeholder="Select a date..."
+                      ariaLabel="Select a date"
+                      minDate={new Date}
+                      value={this.state.CaptureOrderData[i].requireddate}
+                      formatDate={(date) => moment(date).format('DD/MM/YYYY')}
+                    />
+                  </td>
 
-                                            value={this.state.CaptureOrderData[i].requireddate}
-                                            formatDate={(date) => moment(date).format('DD/MM/YYYY')}
-                                        />
+                </tr>;
+              })
+            }
+          </tbody>
+        </table>
 
+        < TextField value={this.state.remarks} onChange={this.remarkschange} multiline ></TextField>
+        <table>
+          <tr>
+            <td> <PrimaryButton id="Add" text="Save" onClick={this.AddData} style={{ width: "100px", marginLeft: "1px", marginTop: "5px", marginBottom: "5px", display: (this.isAdd == "1" ? 'block' : 'none') }} /></td>
+            <td><PrimaryButton id="Cancel" style={{ width: "100px" }} text="Cancel" onClick={this.cancel} /></td>
+          </tr>
+        </table>
+        <Dialog
+          isOpen={this.state.isOpen}
+          type={DialogType.close}
+          onDismiss={this.close.bind(this)}
 
-                                    </td>
-                                   
-                                </tr>;
-                            })
-                        }
-                    </tbody>
-                </table>
-                < TextField value={this.state.remarks} onChange={this.remarkschange} multiline  ></TextField>
-                <PrimaryButton id="Add" text="Save" onClick={this.AddData} style={{ width: "100px",marginLeft:"1px",marginBottom:"5px", display: (this.isAdd == "1" ? 'block' : 'none') }} />
+          subText={this.state.DialogeAlertContent}
+          isBlocking={false}
+          closeButtonAriaLabel='Close'
+        >
+
+          <DialogFooter>
+            <Button buttonType={ButtonType.primary} onClick={this.close}>OK</Button>
+          </DialogFooter>
+        </Dialog>
+
       </div>
-  
-  //     <div className={styles.orderDiv}>
-  //       <h2 className={styles.heading}>Capture Order</h2>
-  //       <Label >Product Name</Label>  <Dropdown id="dept"
-  //         placeholder="Select an option"
-  //         selectedKey={this.state.productname}
-  //         options={this.state.productoption}
-  //         onChanged={this.productChanged}
-  //       //onChange={this.deptChanged}
-  //       />
-  //       <p><Label >Required Quantity </Label>
-  //         < TextField value={this.state.requiredquantity} onChange={this._onrequiredquantitychange} errorMessage={this.state.quantityError} >
-  //         </TextField></p>
-  //       <Label>Required Date</Label>
-  //       <DatePicker //style={{ width: '1000px' }}
-  //         //className={controlClass.control}
-  //         firstDayOfWeek={firstDayOfWeek}
-  //         strings={DayPickerStrings}
-  //         value={this.state.requireddate}
-  //         onSelectDate={this._onrequireddateChange}
-  //         placeholder="Select a date..."
-  //         ariaLabel="Select a date"
-  //         isRequired={true}      
-  //         formatDate={(date) => moment(date).format('DD/MM/YYYY')}
-  //       />
-  //       <p><Label >Remarks</Label>
-  //         < TextField value={this.state.remarks} onChange={this.remarkschange} multiline  ></TextField></p>
 
-  //       <p style={{ color: "rgb(164, 38, 44)" }}>{this.state.noDataError}</p>
-  //       <td> <PrimaryButton id="Add" text="Add" onClick={this.Add} style={{ width: "100px",marginLeft:"1px",marginBottom:"5px", display: (this.isAdd == "1" ? 'block' : 'none') }} /></td>
-  //       <td><PrimaryButton id="Update" text="Update" onClick={this.update} style={{ width: "100px",marginLeft:"1px",marginBottom:"5px", display: (this.isAdd == "0" ? 'block' : 'none') }} /></td>
-  //       <div id="orderview">
-  //         <table style={{ border: '1px solid #ddd', display: (this.state.orderdatalist.length == 0 ? 'none' : 'block'), width: '100%', borderCollapse: 'collapse', backgroundColor: '#f2f2f2' }}>
-
-  //           <tr style={{ backgroundColor: '#f2f2f2' }}>
-  //             <th style={{ border: '1px solid #ddd', padding: '4px', borderCollapse: 'collapse' }}>Product Name</th>
-  //             <th style={{ border: '1px solid #ddd', padding: '4px', borderCollapse: 'collapse' }}>Qty</th>
-  //             <th style={{ border: '1px solid #ddd', padding: '4px', borderCollapse: 'collapse' }}>Required date</th>
-  //             <th  style={{padding: '4px' }}></th>
-  //             <th  style={{ padding: '4px' }}></th>
-  //             {/* <th style={{ border: '1px solid #ddd', padding: '8px', borderCollapse: 'collapse' }}>Assigned</th>
-  //  */}
-  //           </tr>
-  //           <tbody style={{ width: '100%', borderCollapse: 'collapse' }}>
-  //             {
-  //               this.state.orderdatalist.map((item) => {
-  //                   return <tr style={{ backgroundColor: '#f2f2f2' }}>
-  //                   <td style={{ border: '1px solid #ddd', padding: '4px', borderCollapse: 'collapse' }}>{item.Product}</td>
-  //                   <td style={{ border: '1px solid #ddd', padding: '4px', borderCollapse: 'collapse' }}>{item.Title}</td>
-  //                   <td style={{ border: '1px solid #ddd', padding: '4px', borderCollapse: 'collapse' }}>{item.RequiredDate}</td>
-  //                   {/* <td style={{ border: '1px solid #ddd', padding: '8px', borderCollapse: 'collapse' }}>{item.ViewAssign}</td> */}
-  //                   <td style={{ padding: '4px' }}> <IconButton iconProps={EditIcon} title="Edit" ariaLabel="Edit" onClick={() => this.EditOrderdatalist(item)} /></td>
-  //                   <td style={{  padding: '4px' }}> <IconButton iconProps={DeleteIcon} title="Delete" ariaLabel="Delete" onClick={() => this.DeleteOrderdatalist(item)} /></td>
-  //                 </tr>;
-  //               })
-  //             }
-  //           </tbody>
-  //         </table>
-  //       </div>
-  //         <td><PrimaryButton id="Cancel"  style={{ width: "100px"}} text="Cancel" onClick={this.cancel} /></td>         
-  //       {/* {/ <PrimaryButton text="Cancel" onClick={this._onCancel} /> /} */}
-  //     </div>
     );
   }
 }

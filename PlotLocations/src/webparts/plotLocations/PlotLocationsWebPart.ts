@@ -14,6 +14,7 @@ import { sp } from "@pnp/sp/presets/all";
 
 export interface IPlotLocationsWebPartProps {
   description: string;
+  
 }
 
 export default class PlotLocationsWebPart extends BaseClientSideWebPart<IPlotLocationsWebPartProps> {
@@ -32,7 +33,8 @@ export default class PlotLocationsWebPart extends BaseClientSideWebPart<IPlotLoc
     const element: React.ReactElement<IPlotLocationsProps> = React.createElement(
       PlotLocations,
       {
-        description: this.properties.description
+        description: this.properties.description,
+        
       }
     );
 

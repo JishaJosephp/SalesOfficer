@@ -1,7 +1,11 @@
 import * as React from 'react';
 import { IRouteProps } from './IRouteProps';
+// import styles from './CreateRoute.module.scss';
 import { Dropdown, DropdownMenuItemType, IDropdownOption, IDropdownProps, IDropdownStyles } from 'office-ui-fabric-react/lib/Dropdown';
-import { TextField, DatePicker, DayOfWeek, IDatePickerStrings, mergeStyleSets, DefaultButton, Label, PrimaryButton, DialogFooter, Panel, Spinner, SpinnerType, PanelType, IPanelProps } from "office-ui-fabric-react";
+import {
+    TextField, DatePicker, DayOfWeek, IDatePickerStrings, mergeStyleSets, DefaultButton, Label, PrimaryButton, DialogFooter, Panel, Spinner, SpinnerType, PanelType, IPanelProps,
+    Dialog, DialogType, Button, ButtonType
+} from "office-ui-fabric-react";
 import { ChoiceGroup, IChoiceGroupOption } from 'office-ui-fabric-react/lib/ChoiceGroup';
 import { sp } from "@pnp/sp";
 import "@pnp/sp/site-groups";
@@ -14,7 +18,14 @@ import { Web } from "@pnp/sp/webs";
 import "@pnp/sp/files";
 import "@pnp/sp/folders";
 import * as moment from 'moment';
+import * as _ from 'lodash';
 import { IconButton, IIconProps, initializeIcons } from 'office-ui-fabric-react';
+import { useMediaQuery } from 'react-responsive';
+import { confirmAlert } from 'react-confirm-alert'; // Import
+
+import 'react-select-plus/dist/react-select-plus.css';
+import Select from 'react-select';
+
 export interface IRouteindex {
     Id: any;
     index: any;
@@ -54,7 +65,7 @@ export interface IRouteState {
     nouserdealer: boolean;
     routedatalist: any[];
     assignname: any;
-    datedisable: boolean;
+    // datedisable: boolean;
     routeindex: IRouteindex;
     pincode: any;
     pinerrormsg: any;
@@ -64,6 +75,18 @@ export interface IRouteState {
     assignbusy: boolean;
     adddisable: boolean;
     updatedisable: boolean;
+    siteurl: string;
+    isOpenDialog: boolean;
+    message: string;
+    dialogButton: string;
+    itemId: any;
+    deleteData: any[];
+    userdataidState: any;
+    dealerdataarray: any[];
+    multiselected: any[];
+    dealerkey: any[];
+    multidealer: boolean;
+
 }
 const DayPickerStrings: IDatePickerStrings = {
     months: [
@@ -97,8 +120,15 @@ const controlClass = mergeStyleSets({
 
     },
 });
+
 export default class CreateRoute extends React.Component<IRouteProps, IRouteState> {
     public contactflag: any;
+    public multiarray = [];
+    public arr = [];
+    public data: any = [];
+    public dealerarray = [];
+    public salesuseritems: any[];
+    private addroute = [];
     public constructor(props: IRouteProps) {
         super(props);
         this.state = {
@@ -135,7 +165,7 @@ export default class CreateRoute extends React.Component<IRouteProps, IRouteStat
             nouserdealer: true,
             routedatalist: [],
             assignname: "",
-            datedisable: false,
+            // datedisable: false,
             routeindex: {
                 Id: null,
                 index: null
@@ -146,7 +176,19 @@ export default class CreateRoute extends React.Component<IRouteProps, IRouteStat
             pin: false,
             assignbusy: true,
             adddisable: false,
-            updatedisable: false
+            updatedisable: false,
+            siteurl: '',
+            isOpenDialog: false,
+            message: '',
+            dialogButton: "Ok",
+            itemId: '',
+            deleteData: [],
+            userdataidState: '',
+            dealerdataarray: [],
+            multiselected: [],
+            dealerkey: [],
+            multidealer: true,
+
         };
         this.dealerChanged = this.dealerChanged.bind(this);
         this._oncontactnumberchange = this._oncontactnumberchange.bind(this);
@@ -160,10 +202,9 @@ export default class CreateRoute extends React.Component<IRouteProps, IRouteStat
         this.componentDidMount = this.componentDidMount.bind(this);
     }
 
-    public dealerarray = [];
-    public salesuseritems: any[];
-    private addroute = [];
+    //Intialize click
     public async componentDidMount() {
+        //Get User
         try {
             let user = await sp.web.currentUser();
             this.setState({
@@ -201,25 +242,31 @@ export default class CreateRoute extends React.Component<IRouteProps, IRouteStat
         catch { }
         let locationarray = [];
         let assigntoarray = [];
-        // let districtarray = [];
-        let dealerarray = [];
-//States Array
-        const stateitems: any[] = await sp.web.lists.getByTitle("States").items.select("Title,ID").getAll();
+        //States Array
+        const stateitems: any[] = await sp.web.lists.getByTitle("StateData").items.select("ID,website_id,state").getAll();
         let statearray = [];
+        let sorted_State = [];
         for (let i = 0; i < stateitems.length; i++) {
 
             let statedata = {
-                key: stateitems[i].Id,
-                text: stateitems[i].Title
+                key: stateitems[i].website_id,
+                text: stateitems[i].state
             };
             statearray.push(statedata);
 
         }
+        sorted_State = _.orderBy(statearray, 'text', ['asc']);
         this.setState({
-            state: statearray
+            state: sorted_State
         });
-
-
+        //Get currentsite url
+        const rootwebData = await sp.site.rootWeb();
+        console.log(rootwebData);
+        var webValue = rootwebData.ResourcePath.DecodedUrl;
+        //alert(webValue);
+        this.setState({
+            siteurl: webValue
+        });
 
 
     }
@@ -237,26 +284,28 @@ export default class CreateRoute extends React.Component<IRouteProps, IRouteStat
     public async stateChanged(option: { key: any; text: any }) {
         console.log(option.key);
         this.setState({ selectedstate: option.key });
-        // console.log(this.state.selectedstate);
-        const items: any[] = await sp.web.lists.getByTitle("Districts").items.select("Title,ID").filter(" StateId eq " + option.key).get();
+        const items: any[] = await sp.web.lists.getByTitle("DistrictData").items.select("ID,district,website_id").filter(" state_id eq " + option.key).get();
         console.log(items);
 
-
+        let sorted_District = [];
         let filtereddistrict = [];
         for (let i = 0; i < items.length; i++) {
 
 
             let districtdata = {
-                key: items[i].Id,
-                text: items[i].Title
+                key: items[i].website_id,
+                text: items[i].district
             };
 
 
             filtereddistrict.push(districtdata);
         }
+        sorted_District = _.orderBy(filtereddistrict, 'text', ['asc']);
         this.setState({
-            district: filtereddistrict
+            district: sorted_District,
+            pincode: ""
         });
+
     }
     //District Changed
     public async districtChange(option: { key: any; }) {
@@ -278,37 +327,39 @@ export default class CreateRoute extends React.Component<IRouteProps, IRouteStat
             nouserdealer: true
         });
         this.setState({ selecteddistrict: option.key });
-// Filter Dealer based on district
-        const dealeritems: any[] = await sp.web.lists.getByTitle("Dealer List").items.select("Title,ID").filter(" DistrictId eq " + option.key).get();
-        console.log("dealer" + dealeritems);
-        // console.log("dealer" + dealeritems);
+        // Filter Dealer based on district
+        let sorted_Dealer = [];
+        const dealeritems: any[] = await sp.web.lists.getByTitle("DealersData").items.select("ID,dealer_name,website_id").filter(" district eq " + option.key).get();
+
         for (let i = 0; i < dealeritems.length; i++) {
 
-            let dealer = {
-                key: dealeritems[i].Id,
-                text: dealeritems[i].Title
-            };
 
+            let dealer = {
+                value: dealeritems[i].ID,
+                label: dealeritems[i].dealer_name
+            };
             dealerarray.push(dealer);
         }
-
+        sorted_Dealer = _.orderBy(dealerarray, 'text', ['asc']);
         this.setState({
-            dealeroption: dealerarray
+            dealeroption: sorted_Dealer
         });
         const useritems: any[] = await sp.web.lists.getByTitle("Users").items.select("Title,ID,UserNameId").filter(" UserType eq 'Sales'").get();
         console.log(useritems);
-//Filter Assign based on district
+        //Filter Assign based on district
         this.salesuseritems = await sp.web.lists.getByTitle("Users").items.select("Title,ID,UserNameId,DistrictId").get();
         console.log("salesusers" + this.salesuseritems);
 
-
+        let sorted_Assign = [];
         for (let i = 0; i < this.salesuseritems.length; i++) {
             if (this.salesuseritems[i].DistrictId == option.key) {
                 user = {
                     key: this.salesuseritems[i].Id,
                     text: this.salesuseritems[i].Title
                 };
+
                 assigntoarray.push(user);
+                sorted_Assign = _.orderBy(assigntoarray, 'text', ['asc']);
             }
 
             if (this.state.hideapprover == true) {
@@ -321,12 +372,13 @@ export default class CreateRoute extends React.Component<IRouteProps, IRouteStat
                     userid = user.key;
                     username = user.text;
                     assigntoarray.push(user);
+                    sorted_Assign = _.orderBy(assigntoarray, 'text', ['asc']);
                 }
             }
 
         }
         this.setState({
-            assigntooption: assigntoarray,
+            assigntooption: sorted_Assign,
             assignto: userid,
             assign: assign,
             assignname: username
@@ -354,49 +406,23 @@ export default class CreateRoute extends React.Component<IRouteProps, IRouteStat
         else { }
 
     }
-//On Dealer Changed
-    public async dealerChanged(option: { key: any; }) {
-        //console.log(option.key);
-        let locationarray = [];
-        let loc = "";
-        let ph = "";
-        let locid;
-        let dealname = "";
-        this.setState({ dealername: option.key });
 
-        const dealeritems: any[] = await sp.web.lists.getByTitle("Dealer List").items.get();
-        console.log(dealeritems);
-        for (let i = 0; i < dealeritems.length; i++) {
 
-            if (dealeritems[i].Id == option.key) {
-                ph = dealeritems[i].ContactNumber;
-                locid = dealeritems[i].City_x002f_LocationId;
-                dealname = dealeritems[i].Title;
-            }
-        }
-        const item: any = await sp.web.lists.getByTitle("Location").items.getById(locid).get();
-        console.log(item);
-        loc = item.Title;
-        let data = {
-            key: item.Id,
-            text: item.Title
-        };
-        locationarray.push(data);
+    public async dealerChanged(dealerkey) {
 
-        this.setState({
-            contactnumber: ph,
-            locationoption: locationarray,
-            location: loc,
-            locationid: locid,
-            dealertitle: dealname
-        });
+        this.setState({ dealerkey })
+
+        console.log(dealerkey.length);
+        console.log(dealerkey);
+
+
     }
-//On Contact Number changed
+    //On Contact Number changed
     public _oncontactnumberchange = (ev: React.FormEvent<HTMLInputElement>, mob?: any) => {
         this.setState({ contactnumber: mob });
         let mnum = /^(\+\d{1,3}[- ]?)?\d{10}$/;
         let mnum2 = /^(\+\d{1,3}[- ]?)?\d{11}$/;
-        //let mnum = /^(\+\d{1,3}[- ]?)$/;
+
         if (mob.match(mnum) || mob.match(mnum2) || mob == null) {
             this.setState({ contactnumbererrormsg: '' });
             this.contactflag = 1;
@@ -407,13 +433,13 @@ export default class CreateRoute extends React.Component<IRouteProps, IRouteStat
             this.contactflag = 0;
         }
     }
-//On Remarks changed 
+    //On Remarks changed 
     public remarkschange = (ev: React.FormEvent<HTMLInputElement>, remarks?: any) => {
 
         this.setState({ remarks: remarks });
 
     }
-//On Assigned to Changed
+    //On Assigned to Changed
     public assigntoChange(option: { key: any; text: any }) {
         console.log(option);
         let assign;
@@ -429,69 +455,74 @@ export default class CreateRoute extends React.Component<IRouteProps, IRouteStat
 
         });
     }
-//On hour Changed
+    //On hour Changed
     public hour(option: { key: any; }) {
         console.log(option.key);
         this.setState({
             selectedhour: option.key,
-            // adddisable:false,
 
-            // dealerbusy:true
 
         });
 
     }
-//On min Changed
+    //On min Changed
     public min(option: { key: any; }) {
         console.log(option.key);
         this.setState({
             selectedmin: option.key,
-            // adddisable:false,
-            // dealerbusy:true
+
 
         });
     }
-//On update to cancel
+    //On update to cancel
     public update = async () => {
         this._onCancel();
     }
-//On grid edit
+    //On grid edit
     public EditRoutedatalist = async (item) => {
         console.log(item);
-
+        console.log(this.state.routedatalist);
         this.setState({
-            updatedisable: false
+            updatedisable: false,
+            multidealer: false
         });
         let dealerarray = [];
         let assigntoarray = [];
+        let multidealeredit = [];
         let userid;
         let assign;
         let user;
         let username;
         let locpin;
+        let districtitem;
+        let sorted_Assign = [];
+        let sorted_Dealer = [];
         var index = this.state.routedatalist.indexOf(item);
-        if (item.Pincode == "") {
+        //No Pincode
+        if (item.Pincode == "" || item.Pincode == undefined) {
             this.setState({
                 dontknowpin: false,
                 pin: true,
 
             });
-            const dealeritems: any[] = await sp.web.lists.getByTitle("Dealer List").items.select("Title,ID").filter(" DistrictId eq " + item.DistrictId).get();
-            console.log("dealer" + dealeritems);
-            // console.log("dealer" + dealeritems);
+
+            //Filter dealer
+            const dealeritems: any[] = await sp.web.lists.getByTitle("DealersData").items.select("ID,dealer_name,website_id").filter(" district eq " + item.DistrictId).get();
+
             for (let i = 0; i < dealeritems.length; i++) {
 
-                let dealer = {
-                    key: dealeritems[i].Id,
-                    text: dealeritems[i].Title
-                };
 
+                let dealer = {
+                    value: dealeritems[i].ID,
+                    label: dealeritems[i].dealer_name
+                };
                 dealerarray.push(dealer);
             }
-
+            sorted_Dealer = _.orderBy(dealerarray, 'text', ['asc']);
             this.setState({
-                dealeroption: dealerarray
+                dealeroption: sorted_Dealer
             });
+            //Filter Assign
             const useritems: any[] = await sp.web.lists.getByTitle("Users").items.select("Title,ID,UserNameId").filter(" UserType eq 'Sales'").get();
             console.log(useritems);
 
@@ -505,7 +536,9 @@ export default class CreateRoute extends React.Component<IRouteProps, IRouteStat
                         key: this.salesuseritems[i].Id,
                         text: this.salesuseritems[i].Title
                     };
+
                     assigntoarray.push(user);
+                    sorted_Assign = _.orderBy(assigntoarray, 'text', ['asc']);
                 }
 
                 if (this.state.hideapprover == true) {
@@ -518,12 +551,14 @@ export default class CreateRoute extends React.Component<IRouteProps, IRouteStat
                         userid = user.key;
                         username = user.text;
                         assigntoarray.push(user);
+                        sorted_Assign = _.orderBy(assigntoarray, 'text', ['asc']);
+
                     }
                 }
 
             }
             this.setState({
-                assigntooption: assigntoarray,
+                assigntooption: sorted_Assign,
                 assignto: userid,
                 assign: assign,
                 assignname: username
@@ -537,51 +572,43 @@ export default class CreateRoute extends React.Component<IRouteProps, IRouteStat
                 pin: false,
 
             });
-            locpin = item.Pincode.substring(0, 4);
-
-            console.log(locpin.trim());
-
-
-            const dealeritems = await sp.web.lists.getByTitle("Dealer List").getItemsByCAMLQuery({
-                ViewXml: "<View><Query><Where><BeginsWith><FieldRef Name='City_x002f_Location_x003a_PinCod' /><Value Type='Lookup'>"
-                    + locpin + "</Value></BeginsWith></Where></Query></View>",
-            });
-
+            //With Pincode
+            locpin = item.Pincode;
+            //Filter Dealer
+            const dealeritems: any[] = await sp.web.lists.getByTitle("DealersData").items.filter(" pin eq " + locpin).getAll(5000);
             console.log(dealeritems);
+
             for (let i = 0; i < dealeritems.length; i++) {
 
+
                 let dealer = {
-                    key: dealeritems[i].Id,
-                    text: dealeritems[i].Title
+                    value: dealeritems[i].ID,
+                    label: dealeritems[i].dealer_name
                 };
+                districtitem = dealeritems[i].district;
 
                 dealerarray.push(dealer);
+                sorted_Dealer = _.orderBy(dealerarray, 'text', ['asc']);
             }
 
             this.setState({
-                dealeroption: dealerarray
+                dealeroption: sorted_Dealer
             });
-            let districtitem;
-            const locationitems = await sp.web.lists.getByTitle("Location").getItemsByCAMLQuery({
-                ViewXml: "<View><Query><Where><BeginsWith><FieldRef Name='PinCode' /><Value Type='Text'>"
-                    + locpin + "</Value></BeginsWith></Where></Query></View>",
-            });
-            console.log(locationitems);
-            for (let i = 0; i < locationitems.length; i++) {
-                districtitem = locationitems[i].DistrictsId;
-            }
-            this.salesuseritems = await sp.web.lists.getByTitle("Users").items.select("Title,ID,UserNameId").filter(" DistrictId eq " + districtitem).get();
+
+            //Filter Assign
+            this.salesuseritems = await sp.web.lists.getByTitle("Users").items.select("Title,ID,UserNameId,DistrictId").get();
             for (let i = 0; i < this.salesuseritems.length; i++) {
+                if (this.salesuseritems[i].DistrictId == districtitem || this.state.currentuserid == this.salesuseritems[i].UserNameId) {
+                    user = {
+                        key: this.salesuseritems[i].Id,
+                        text: this.salesuseritems[i].Title
+                    };
 
-                user = {
-                    key: this.salesuseritems[i].Id,
-                    text: this.salesuseritems[i].Title
-                };
-
-                if (assigntoarray.indexOf(user) == -1) {
-                    assigntoarray.push(user);
+                    if (assigntoarray.indexOf(user) == -1) {
+                        assigntoarray.push(user);
+                        sorted_Assign = _.orderBy(assigntoarray, 'text', ['asc']);
+                    }
                 }
-
                 if (this.state.hideapprover == true) {
                     if (this.state.currentuserid == this.salesuseritems[i].UserNameId) {
                         user = {
@@ -592,12 +619,14 @@ export default class CreateRoute extends React.Component<IRouteProps, IRouteStat
                         userid = user.key;
                         username = user.text;
                         assigntoarray.push(user);
+                        sorted_Assign = _.orderBy(assigntoarray, 'text', ['asc']);
+
                     }
                 }
 
 
                 this.setState({
-                    assigntooption: assigntoarray,
+                    assigntooption: sorted_Assign,
                     assignto: userid,
                     assign: assign,
                     assignname: username
@@ -606,18 +635,23 @@ export default class CreateRoute extends React.Component<IRouteProps, IRouteStat
             }
 
         }
-
+        //Get Index
         let routeindex: IRouteindex;
         routeindex = {
             Id: item.ID,
             index: index
         };
+        multidealeredit[0] = {
+            value: item.DealerNameId,
+            label: item.ViewDealerName
+        }
+
         this.setState({ routeindex: routeindex });
         this.setState({
-            //    planneddate:item.PlannedDate,
+
             selectedstate: item.StateId,
             selecteddistrict: item.DistrictId,
-            dealername: item.DealerNameId,
+            dealerkey: multidealeredit,
             contactnumber: item.ContactNumber,
             location: item.Location,
             assignto: item.AssignToId,
@@ -628,79 +662,84 @@ export default class CreateRoute extends React.Component<IRouteProps, IRouteStat
             pincode: item.Pincode
         });
     }
-//On grid delete
+    //On grid delete
     public DeleteRoutedatalist = async (data) => {
-        if (confirm('Are you sure you want to delete the data?')) {
-            //  alert(data.ID);
-            this.addroute = this.state.routedatalist;
-            const items = this.addroute.filter(item => item !== data);
-            this.addroute = items;
 
-            this.setState({ routedatalist: this.addroute });
-            let item = await sp.web.lists.getByTitle("Route List").items.getById(data.ID).delete();
-            this.setState({
-                selectedstate: "",
-                selecteddistrict: "",
-                selectedhour: "",
-                selectedmin: "",
-                mandatory: true,
-                planneddate: this.state.planneddate,
-                dealername: null,
-                contactnumber: null,
-                contactnumbererrormsg: "",
-                remarks: "",
-                plannedvisittime: "",
-                location: "",
-                assignto: null,
-                locationid: "",
-                currentuser: "",
-                dealertitle: "",
-                currentuserid: "",
-                assign: "",
-                dealerbusy: true,
-                nouser: true,
-                nodealer: true,
-                nouserdealer: true,
-                assignname: "",
-                datedisable: true
+        console.log(data);
 
-            });
-            this.setState({
-                routeindex: {
-                    Id: null,
-                    index: null
-                }
-            });
 
-        }
+        this.setState({
+            dialogButton: "Delete",
+            isOpenDialog: true,
+            message: "Are you sure you want to delete the data?",
+            itemId: data.ID,
+            deleteData: data
+        });
+
+
     }
-//On add route
+    //On add route
     private Addroute = async (e) => {
-        console.log(this.state.hideapprover);
+        console.log(this.state.assign);
+        console.log(this.state.assignto);
+        console.log(this.state.dealerkey);
+        console.log(this.state.pincode);
         this.setState({ mandatory: true, dealerbusy: true, assignbusy: true, adddisable: true });
-        let siteUrl = "https://mrbutlers.sharepoint.com/sites/SalesOfficerApplication";
-        let web = Web(siteUrl);
         let itemId;
         let route;
         let assignbusy;
         let aprvday;
         let addaprv;
         let userdataid;
+        let loc = "";
+        let ph = "";
+        let locid;
+        let pin;
+        let dealname = "";
         this.addroute = this.state.routedatalist;
         let newitemid;
+        this.data = [];
         var currentdate = new Date();
         let today = moment(currentdate).format('YYYY-MM-DDTHH:mm:00');
-        console.log(today);
         let currentMonth = moment(today).format("MM");
+        let currentDay = moment(today).format("DD");
         let planneddate = moment(this.state.planneddate).format('YYYY-MM-DDT12:00:00Z');
         let planneddateformat = moment(this.state.planneddate).format('DD-MMM-YYYY');
-        let pdt = moment(this.state.planneddate).format('YYYY-MM-DD' + 'T' + this.state.selectedhour + ':' + this.state.selectedmin + ':00');
-        let notification = this.state.currentuser + " created a route to visit " + this.state.dealertitle + " on "
-            + planneddateformat + " at " + this.state.selectedhour + ":" + this.state.selectedmin;
         let date = moment(this.state.planneddate).format('YYYY-MM-DDT12:00:00Z');
-        let plannedtime = this.state.selectedhour + ":" + this.state.selectedmin;
         let plannedday = moment(this.state.planneddate).format('DD');
         let plannedMonth = moment(this.state.planneddate).format('MM');
+        //Select Dealers
+        for (let j = 0; j < this.state.dealerkey.length; j++) {
+            const dealeritems: any[] = await sp.web.lists.getByTitle("DealersData").items.filter(" ID eq " + this.state.dealerkey[j].value).get();
+            console.log(dealeritems);
+
+            ph = dealeritems[0].phone;
+            loc = dealeritems[0].street;
+            dealname = dealeritems[0].dealer_name;
+
+            if (this.state.pin == false) {
+                pin = dealeritems[0].pin;
+
+            }
+            console.log("Phone:" + ph + "loc:" + loc);
+
+            this.data[this.data.length] = {
+                "phonenumber": ph,
+                "location": loc,
+                "dealname": dealname,
+                "pincode": pin,
+                "dealername": this.state.dealerkey[j].value
+            }
+        }
+
+        this.setState({
+            contactnumber: ph,
+            location: loc,
+            dealertitle: dealname,
+            pincode: pin,
+            dealerdataarray: this.data
+        });
+        //Check Route List
         const routeData = await sp.web.lists.getByTitle("Route List").getItemsByCAMLQuery({
             ViewXml: "<View><Query><Where><And><And><Eq><FieldRef Name='DealerName' LookupId='TRUE' /><Value Type='Lookup'>"
                 + this.state.dealername + "</Value></Eq><Eq><FieldRef Name='PlannedDate' /><Value Type='DateTime'>"
@@ -715,6 +754,7 @@ export default class CreateRoute extends React.Component<IRouteProps, IRouteStat
         else {
             route = "False";
         }
+        //Check Assign 
         const assignData = await sp.web.lists.getByTitle("Route List").getItemsByCAMLQuery({
             ViewXml: "<View><Query><Where><And><And><Eq><FieldRef Name='AssignTo' LookupId='TRUE' /><Value Type='Lookup'>"
                 + this.state.assignto + "</Value></Eq><Eq><FieldRef Name='PlannedDate' /><Value Type='DateTime'>"
@@ -728,9 +768,11 @@ export default class CreateRoute extends React.Component<IRouteProps, IRouteStat
         else {
             assignbusy = "False";
         }
+        //Only if Sales Officer
         if (this.state.hideapprover == true) {
             //Same month
             if (currentMonth == plannedMonth) {
+                //Settings List
                 const settingday = await sp.web.lists.getByTitle("Settings List").select("Title").getItemsByCAMLQuery({
                     ViewXml: "<View><Query><Where><Eq><FieldRef Name='ValueType' /><Value Type='Choice'>Days</Value></Eq></Where></Query></View>",
                 });
@@ -744,7 +786,7 @@ export default class CreateRoute extends React.Component<IRouteProps, IRouteStat
                         aprvday = settingday[i].Title;
                     }
                     //Day checking
-                    if (aprvday >= plannedday) {
+                    if (aprvday >= currentDay) {
                         addaprv = "add";
                     }
                     else {
@@ -776,29 +818,30 @@ export default class CreateRoute extends React.Component<IRouteProps, IRouteStat
         }
         //Validation
         if (addaprv == "approve") {
-            let conf = confirm("You need approval to create route");
-            if (conf == true) {
-                const i = await sp.web.lists.getByTitle("Users").items.getById(parseInt(userdataid)).update({
-                    Status: "Request Send"
-                });
-                this._onCancel();
-            }
-            this._onCancel();
+
+            this.setState({
+                dialogButton: "Confirm",
+                isOpenDialog: true,
+                message: "You need approval to create route",
+                userdataidState: parseInt(userdataid)
+
+            });
         }
+        //Validation
         else if (assignbusy == "False") {
-            this.setState({ assignbusy: false, adddisable: false });
+            this.setState({ assignbusy: false, adddisable: false, multidealer: false });
         }
         else if (route == "False") {
-            this.setState({ dealerbusy: false, adddisable: false });
+            this.setState({ dealerbusy: false, adddisable: false, multidealer: false });
         }
         else if (this.state.nouserdealer == false) {
-            this.setState({ nouserdealer: false, adddisable: false });
+            this.setState({ nouserdealer: false, adddisable: false, multidealer: false });
         }
         else if (this.state.nodealer == false) {
-            this.setState({ nodealer: false, adddisable: false });
+            this.setState({ nodealer: false, adddisable: false, multidealer: false });
         }
         else if (this.state.nouser == false) {
-            this.setState({ nouser: false, adddisable: false });
+            this.setState({ nouser: false, adddisable: false, multidealer: false });
         }
 
         else {
@@ -806,214 +849,299 @@ export default class CreateRoute extends React.Component<IRouteProps, IRouteStat
             if (this.state.pin == true) {
                 if (planneddate == "" || this.state.selectedhour == "" || this.state.selectedmin == ""
                     || this.state.dealername == "" || this.state.contactnumber == "" || this.contactflag == 0
-                    || this.state.location == "" || this.state.assignto == ""
+                    || this.state.location == "" || this.state.assignto == "" || this.state.assignto == undefined
                     || this.state.selectedstate == "" && this.state.selecteddistrict == "") {
                     this.setState({ mandatory: false, adddisable: false });
                 }
                 else {
-                    let conf = confirm("Do you want to submit?");
-                    if (conf == true) {
-                        let a = await sp.web.lists.getByTitle("Route List").items.add({
-                            Title: this.state.plannedvisittime,
-                            PlannedDate: planneddate,
-                            StateId: this.state.selectedstate,
-                            DistrictId: this.state.selecteddistrict,
-                            DealerNameId: this.state.dealername,
-                            ContactNumber: this.state.contactnumber,
-                            Location: this.state.location,
-                            AssignToId: this.state.assignto,
-                            Remarks: this.state.remarks,
-                            Hours: this.state.selectedhour,
-                            Minutes: this.state.selectedmin,
-                            PlannedDateTime: pdt,
-                            LocationsId: this.state.locationid,
-                            AssignId: this.state.assign,
-                            Pincode: this.state.pincode,
-                            Checkin: "1"
-                        }).then(async i => {
-                            newitemid = i.data.ID;
-                            if (newitemid != undefined) {
-                                this.addroute.push({
-                                    ViewPlannedDate: planneddateformat,
-                                    ViewPlannedTime: plannedtime,
-                                    ViewDealerName: this.state.dealertitle,
-                                    ViewAssign: this.state.assignname,
-                                    ID: newitemid,
+                    const stateId: any[] = await sp.web.lists.getByTitle("StateData").items.select("ID").filter(" website_id eq " + this.state.selectedstate).get();
+                    console.log(stateId);
+
+                    const districtId: any[] = await sp.web.lists.getByTitle("DistrictData").items.select("ID").filter(" website_id eq " + this.state.selecteddistrict).get();
+                    console.log(districtId);
+                    let hrcount = 0;
+                    let addhour;
+                    if (this.state.dealerdataarray.length == 0) { }
+                    else {
+                        {
+                            this.state.dealerdataarray.map(async (items) => {
+                                //Increment time on selecting multiple dealers
+                                let inthour = parseInt(this.state.selectedhour) + hrcount;
+                                let inchr = inthour + "";
+
+                                if (inthour < 10) {
+                                    addhour = '0' + inchr;
+                                }
+                                else {
+                                    addhour = inchr;
+                                }
+                                hrcount = hrcount + 1;
+                                let pdt = moment(this.state.planneddate).format('YYYY-MM-DD' + 'T' + addhour + ':' + this.state.selectedmin + ':00');
+                                let notification = this.state.currentuser + " created a route to visit " + this.state.dealertitle + " on "
+                                    + planneddateformat + " at " + addhour + ":" + this.state.selectedmin;
+                                let plannedtime = addhour + ":" + this.state.selectedmin;
+                                //Add item
+                                let a = await sp.web.lists.getByTitle("Route List").items.add({
+                                    Title: this.state.plannedvisittime,
                                     PlannedDate: planneddate,
-                                    StateId: this.state.selectedstate,
-                                    DistrictId: this.state.selecteddistrict,
-                                    DealerNameId: this.state.dealername,
-                                    ContactNumber: this.state.contactnumber,
-                                    Location: this.state.location,
+                                    StateId: stateId[0].ID,
+                                    DistrictId: districtId[0].ID,
+                                    DealerNameId: items.dealername,
+                                    ContactNumber: items.phonenumber,
+                                    Location: items.location,
                                     AssignToId: this.state.assignto,
                                     Remarks: this.state.remarks,
-                                    Hour: this.state.selectedhour,
-                                    Minute: this.state.selectedmin,
-                                    LocationsId: this.state.locationid,
-                                    Pincode: this.state.pincode,
+                                    Hours: addhour,
+                                    Minutes: this.state.selectedmin,
+                                    PlannedDateTime: pdt,
+                                    // LocationsId: this.state.locationid,
                                     AssignId: this.state.assign,
+                                    Pincode: items.pincode,
+                                    Checkin: "1"
+                                }).then(async i => {
+                                    newitemid = i.data.ID;
+                                    if (newitemid != undefined) {
+                                        this.addroute.push({
+                                            ViewPlannedDate: planneddateformat,
+                                            ViewPlannedTime: plannedtime,
+                                            ViewDealerName: items.dealname,
+                                            ViewAssign: this.state.assignname,
+                                            ID: newitemid,
+                                            PlannedDate: planneddate,
+                                            StateId: this.state.selectedstate,
+                                            DistrictId: this.state.selecteddistrict,
+                                            DealerNameId: items.dealername,
+                                            ContactNumber: items.phonenumber,
+                                            Location: items.location,
+                                            AssignToId: i.data.AssignToId,
+                                            Remarks: i.data.Remarks,
+                                            Hour: i.data.Hours,
+                                            Minute: i.data.Minutes,
+                                            LocationsId: this.state.locationid,
+                                            Pincode: items.pincode,
+                                            AssignId: i.data.AssignId,
+                                        });
+                                        this.setState({
+                                            routedatalist: this.addroute,
+
+                                        });
+                                    }
                                 });
+                                if (this.state.hideapprover == true) {
+                                    //Add notification on salesofficer
+                                    await sp.web.lists.getByTitle("Notification").items.add({
+                                        DashboardType: "Admin",
+                                        Notification: notification,
+                                        RouteId: newitemid
+                                    });
+                                    this.setState({
+                                        hideapprover: true
+
+                                    });
+                                }
+                                if (this.state.hideapprover == false) {
+
+                                    this.setState({
+                                        assignto: null,
+                                        assign: "",
+                                        assignname: "",
+                                    });
+                                }
                                 this.setState({
-                                    routedatalist: this.addroute,
+
+                                    selectedstate: "",
+                                    selecteddistrict: "",
+                                    selectedhour: "",
+                                    selectedmin: "",
+                                    mandatory: true,
+                                    planneddate: this.state.planneddate,
+                                    dealername: null,
+                                    contactnumber: null,
+                                    contactnumbererrormsg: "",
+                                    remarks: "",
+                                    plannedvisittime: "",
+                                    location: "",
+
+                                    locationid: "",
+                                    currentuser: "",
+                                    dealertitle: "",
+                                    pin: false,
+                                    dontknowpin: true,
+
+                                    nouser: true,
+                                    nodealer: true,
+                                    nouserdealer: true,
+
+                                    adddisable: false,
+                                    dealerkey: [],
 
                                 });
-                            }
-                        });
-                        if (this.state.hideapprover == true) {
-                            await sp.web.lists.getByTitle("Notification").items.add({
-                                DashboardType: "Admin",
-                                Notification: notification,
-                                RouteId: newitemid
-                            });
-                            this.setState({
-                                hideapprover: true
 
-                            });
+
+                                this.setState({
+
+                                    message: "Saved successfully",
+                                    isOpenDialog: true
+
+                                });
+
+                            })
                         }
-                        this.setState({
-                            selectedstate: "",
-                            selecteddistrict: "",
-                            selectedhour: "",
-                            selectedmin: "",
-                            mandatory: true,
-                            planneddate: this.state.planneddate,
-                            dealername: null,
-                            contactnumber: null,
-                            contactnumbererrormsg: "",
-                            remarks: "",
-                            plannedvisittime: "",
-                            location: "",
-                            assignto: null,
-                            locationid: "",
-                            currentuser: "",
-                            dealertitle: "",
-                            pin: false,
-                            dontknowpin: true,
-                            assign: "",
-                            // dealerbusy:true,
-                            nouser: true,
-                            nodealer: true,
-                            nouserdealer: true,
-                            assignname: "",
-                            datedisable: true,
-                            pincode: "",
-                            adddisable: false,
-                        });
 
                     }
+
                 }
             }
             //With Pincode
             else if (this.state.pin == false) {
                 if (planneddate == "" || this.state.selectedhour == "" || this.state.selectedmin == ""
                     || this.state.dealername == "" || this.state.contactnumber == "" || this.contactflag == 0
-                    || this.state.location == "" || this.state.assignto == "" || this.state.pincode == "") {
+                    || this.state.location == "" || this.state.assignto == "" || this.state.assignto == undefined || this.state.pincode == "") {
                     this.setState({ mandatory: false, adddisable: false });
                 }
                 else {
-                    let conf = confirm("Do you want to submit?");
-                    if (conf == true) {
-                        let a = await sp.web.lists.getByTitle("Route List").items.add({
-                            Title: this.state.plannedvisittime,
-                            PlannedDate: planneddate,
-                            DealerNameId: this.state.dealername,
-                            ContactNumber: this.state.contactnumber,
-                            Location: this.state.location,
-                            AssignToId: this.state.assignto,
-                            Remarks: this.state.remarks,
-                            Hours: this.state.selectedhour,
-                            Minutes: this.state.selectedmin,
-                            PlannedDateTime: pdt,
-                            LocationsId: this.state.locationid,
-                            AssignId: this.state.assign,
-                            Pincode: this.state.pincode,
-                            Checkin: "1",
-                            StateId: 0,
-                            DistrictId: 0,
-                        }).then(async i => {
-                            newitemid = i.data.ID;
-                            if (newitemid != undefined) {
-                                this.addroute.push({
-                                    ViewPlannedDate: planneddateformat,
-                                    ViewPlannedTime: plannedtime,
-                                    ViewDealerName: this.state.dealertitle,
-                                    ViewAssign: this.state.assignname,
-                                    ID: newitemid,
+                    let hrcount = 0;
+                    let addhour;
+                    if (this.state.dealerdataarray.length == 0) { }
+                    else {
+                        {
+                            this.state.dealerdataarray.map(async (items) => {
+                                // Increment hour on multiple dealer
+                                let inthour = parseInt(this.state.selectedhour) + hrcount;
+                                let inchr = inthour + "";
+
+                                if (inthour < 10) {
+                                    addhour = '0' + inchr;
+                                }
+                                else {
+                                    addhour = inchr;
+                                }
+                                hrcount = hrcount + 1;
+                                let pdt = moment(this.state.planneddate).format('YYYY-MM-DD' + 'T' + addhour + ':' + this.state.selectedmin + ':00');
+                                let notification = this.state.currentuser + " created a route to visit " + this.state.dealertitle + " on "
+                                    + planneddateformat + " at " + addhour + ":" + this.state.selectedmin;
+                                let plannedtime = addhour + ":" + this.state.selectedmin;
+                                //Add Route
+                                let a = await sp.web.lists.getByTitle("Route List").items.add({
+                                    Title: this.state.plannedvisittime,
                                     PlannedDate: planneddate,
-                                    StateId: this.state.selectedstate,
-                                    DistrictId: this.state.selecteddistrict,
-                                    DealerNameId: this.state.dealername,
-                                    ContactNumber: this.state.contactnumber,
-                                    Location: this.state.location,
+                                    DealerNameId: items.dealername,
+                                    ContactNumber: items.phonenumber,
+                                    Location: items.location,
                                     AssignToId: this.state.assignto,
                                     Remarks: this.state.remarks,
-                                    Hour: this.state.selectedhour,
-                                    Minute: this.state.selectedmin,
-                                    LocationsId: this.state.locationid,
-                                    Pincode: this.state.pincode,
+                                    Hours: addhour,
+                                    Minutes: this.state.selectedmin,
+                                    PlannedDateTime: pdt,
                                     AssignId: this.state.assign,
+                                    Pincode: items.pincode,
+                                    Checkin: "1",
+                                    StateId: 0,
+                                    DistrictId: 0,
+                                }).then(async i => {
+                                    newitemid = i.data.ID;
+                                    if (newitemid != undefined) {
+                                        this.addroute.push({
+                                            ViewPlannedDate: planneddateformat,
+                                            ViewPlannedTime: plannedtime,
+                                            ViewDealerName: items.dealname,
+                                            ViewAssign: this.state.assignname,
+                                            ID: newitemid,
+                                            PlannedDate: planneddate,
+                                            StateId: this.state.selectedstate,
+                                            DistrictId: this.state.selecteddistrict,
+                                            DealerNameId: items.dealername,
+                                            ContactNumber: items.phonenumber,
+                                            Location: items.location,
+                                            AssignToId: i.data.AssignToId,
+                                            Remarks: i.data.Remarks,
+                                            Hour: i.data.Hours,
+                                            Minute: i.data.Minutes,
+                                            LocationsId: this.state.locationid,
+                                            Pincode: items.pincode,
+                                            AssignId: i.data.AssignId,
+                                        });
+                                        this.setState({
+                                            routedatalist: this.addroute,
+
+                                        });
+                                    }
                                 });
+                                if (this.state.hideapprover == true) {
+                                    //Add Notification to Admin when SO added route
+                                    await sp.web.lists.getByTitle("Notification").items.add({
+                                        DashboardType: "Admin",
+                                        Notification: notification,
+                                        RouteId: newitemid
+                                    });
+                                    this.setState({
+                                        hideapprover: true
+
+                                    });
+                                }
+                                if (this.state.hideapprover == false) {
+
+                                    this.setState({
+                                        assignto: null,
+                                        assign: "",
+                                        assignname: "",
+                                    });
+                                }
                                 this.setState({
-                                    routedatalist: this.addroute,
+                                    // dealeroption:[],
+                                    selectedstate: "",
+                                    selecteddistrict: "",
+                                    selectedhour: "",
+                                    selectedmin: "",
+                                    mandatory: true,
+                                    planneddate: this.state.planneddate,
+                                    dealername: null,
+                                    contactnumber: null,
+                                    contactnumbererrormsg: "",
+                                    remarks: "",
+                                    plannedvisittime: "",
+                                    location: "",
+
+                                    locationid: "",
+                                    currentuser: "",
+                                    dealertitle: "",
+                                    currentuserid: "",
+
+                                    nouser: true,
+                                    nodealer: true,
+                                    nouserdealer: true,
+
+                                    pincode: this.state.pincode,
+                                    pin: false,
+                                    dontknowpin: true,
+                                    adddisable: false,
+                                    dealerdataarray: [],
+                                    dealerkey: []
+                                });
+
+                                this.setState({
+
+                                    message: "Saved successfully",
+                                    isOpenDialog: true
 
                                 });
-                            }
-                        });
-                        if (this.state.hideapprover == true) {
-                            await sp.web.lists.getByTitle("Notification").items.add({
-                                DashboardType: "Admin",
-                                Notification: notification,
-                                RouteId: newitemid
-                            });
-                            this.setState({
-                                hideapprover: true
 
-                            });
+
+                            })
                         }
-                        this.setState({
-                            selectedstate: "",
-                            selecteddistrict: "",
-                            selectedhour: "",
-                            selectedmin: "",
-                            mandatory: true,
-                            planneddate: this.state.planneddate,
-                            dealername: null,
-                            contactnumber: null,
-                            contactnumbererrormsg: "",
-                            remarks: "",
-                            plannedvisittime: "",
-                            location: "",
-                            assignto: null,
-                            locationid: "",
-                            currentuser: "",
-                            dealertitle: "",
-                            currentuserid: "",
-                            assign: "",
-                            // dealerbusy:true,
-                            nouser: true,
-                            nodealer: true,
-                            nouserdealer: true,
-                            assignname: "",
-                            datedisable: true,
-                            pincode: "",
-                            pin: false,
-                            dontknowpin: true,
-                            adddisable: false
-                        });
-                        // alert("Saved successfully");
                     }
-                }
-            }
-            this.setState({ adddisable: false });
 
+                }
+                this.setState({ adddisable: false });
+            }
         }
 
     }
     //Update grid 
     private async UpdateRoutedatalist() {
-        this.setState({ mandatory: true, dealerbusy: true, assignbusy: true, updatedisable: true });
+        this.setState({ mandatory: true, dealerbusy: true, assignbusy: true, updatedisable: true, multidealer: true, });
         console.log(this.state.routeindex);
-        let dealerid = this.state.dealername
+        let dealerid
         console.log(this.state.dealername);
         let assignid = this.state.assignto;
         console.log(this.state.assignto);
@@ -1025,11 +1153,17 @@ export default class CreateRoute extends React.Component<IRouteProps, IRouteStat
         let aprvday;
         let addaprv;
         let userdataid;
+        let loc = "";
+        let ph = "";
+        let locid;
+        let pin;
+        this.data = [];
         var index = this.state.routeindex.index;
         var currentdate = new Date();
         let today = moment(currentdate).format('YYYY-MM-DDTHH:mm:00');
         console.log(today);
         let currentMonth = moment(today).format("MM");
+        let currentDay = moment(today).format("DD");
         let planneddate = moment(this.state.planneddate).format('YYYY-MM-DDT12:00:00Z');
         let planneddateformat = moment(this.state.planneddate).format('DD-MMM-YYYY');
         let pdt = moment(this.state.planneddate).format('YYYY-MM-DD' + 'T' + this.state.selectedhour + ':' + this.state.selectedmin + ':00');
@@ -1037,15 +1171,48 @@ export default class CreateRoute extends React.Component<IRouteProps, IRouteStat
         let plannedMonth = moment(this.state.planneddate).format('MM');
         let plannedday = moment(this.state.planneddate).format('DD');
         let list = sp.web.lists.getByTitle("Route List");
-        const dealeritems: any = await sp.web.lists.getByTitle("Dealer List").items.getById(dealerid).get();
-        dealname = dealeritems.Title;
+        //Get editing dealers id
+        if (this.state.dealerkey.length == undefined)
+            dealerid = this.state.dealerkey["value"];
+        else
+            dealerid = this.state.dealerkey[0].value;
+        console.log(dealerid);
+        //Get dealer data
+        const dealeritems: any[] = await sp.web.lists.getByTitle("DealersData").items.filter(" ID eq " + dealerid).get();
+        console.log(dealeritems);
+
+        ph = dealeritems[0].phone;
+        loc = dealeritems[0].street;
+        dealname = dealeritems[0].dealer_name;
+
+        if (this.state.pin == false) {
+            pin = dealeritems[0].pin;
+
+        }
+
+        this.data[this.data.length] = {
+            "phonenumber": ph,
+            "location": loc,
+            "dealname": dealname,
+            "pincode": pin,
+            "dealername": dealerid
+        }
+        this.setState({
+            contactnumber: ph,
+            location: loc,
+            dealertitle: dealname,
+            pincode: pin,
+            dealerdataarray: this.data
+        });
+        //Get Assign
         const useritems: any = await sp.web.lists.getByTitle("Users").items.getById(assignid).get();
         console.log(useritems);
         assign = useritems.Title;
         let date = moment(this.state.planneddate).format('YYYY-MM-DDT12:00:00Z');
+        //Get Route
         const routeData = await sp.web.lists.getByTitle("Route List").getItemsByCAMLQuery({
             ViewXml: "<View><Query><Where><And><And><Eq><FieldRef Name='DealerName' LookupId='TRUE' /><Value Type='Lookup'>"
-                + this.state.dealername + "</Value></Eq><Eq><FieldRef Name='PlannedDate' /><Value Type='DateTime'>"
+                + dealerid + "</Value></Eq><Eq><FieldRef Name='PlannedDate' /><Value Type='DateTime'>"
                 + date + "</Value></Eq></And><And><Eq><FieldRef Name='Hours' /> <Value Type='Text'>"
                 + this.state.selectedhour + "</Value></Eq><Eq><FieldRef Name='Minutes' /> <Value Type='Text'>"
                 + this.state.selectedmin + "</Value></Eq></And></And></Where></Query></View>",
@@ -1069,7 +1236,7 @@ export default class CreateRoute extends React.Component<IRouteProps, IRouteStat
 
         }
 
-
+        //Get Assign
         const assignData = await sp.web.lists.getByTitle("Route List").getItemsByCAMLQuery({
             ViewXml: "<View><Query><Where><And><And><Eq><FieldRef Name='AssignTo' LookupId='TRUE' /><Value Type='Lookup'>"
                 + this.state.assignto + "</Value></Eq><Eq><FieldRef Name='PlannedDate' /><Value Type='DateTime'>"
@@ -1092,7 +1259,9 @@ export default class CreateRoute extends React.Component<IRouteProps, IRouteStat
             }
         }
         if (this.state.hideapprover == true) {
+            //Same month
             if (currentMonth == plannedMonth) {
+                //Settings List
                 const settingday = await sp.web.lists.getByTitle("Settings List").select("Title").getItemsByCAMLQuery({
                     ViewXml: "<View><Query><Where><Eq><FieldRef Name='ValueType' /><Value Type='Choice'>Days</Value></Eq></Where></Query></View>",
                 });
@@ -1105,7 +1274,7 @@ export default class CreateRoute extends React.Component<IRouteProps, IRouteStat
                     else {
                         aprvday = settingday[i].Title;
                     }
-                    if (aprvday >= plannedday) {
+                    if (aprvday >= currentDay) {
                         addaprv = "add";
                     }
                     else {
@@ -1136,197 +1305,270 @@ export default class CreateRoute extends React.Component<IRouteProps, IRouteStat
         }
         //Validation
         if (addaprv == "approve") {
-            let conf = confirm("You need approval to create route");
-            if (conf == true) {
-                const i = await sp.web.lists.getByTitle("Users").items.getById(parseInt(userdataid)).update({
-                    Status: "Request Send"
-                });
-                this._onCancel();
-            }
-            this._onCancel();
+
+            this.setState({
+                dialogButton: "Confirm",
+                isOpenDialog: true,
+                message: "You need approval to create route",
+                userdataidState: parseInt(userdataid)
+
+            });
+
+            // this._onCancel();
         }
         else if (assignbusy == "False") {
-            this.setState({ assignbusy: false, updatedisable: false });
+            this.setState({ assignbusy: false, updatedisable: false, multidealer: false });
         }
         else if (route == "False") {
-            this.setState({ dealerbusy: false, updatedisable: false });
+            this.setState({ dealerbusy: false, updatedisable: false, multidealer: false });
         }
         else if (this.state.nouserdealer == false) {
-            this.setState({ nouserdealer: false, updatedisable: false });
+            this.setState({ nouserdealer: false, updatedisable: false, multidealer: false });
         }
         else if (this.state.nodealer == false) {
-            this.setState({ nodealer: false, updatedisable: false });
+            this.setState({ nodealer: false, updatedisable: false, multidealer: false });
         }
         else if (this.state.nouser == false) {
-            this.setState({ nouser: false, updatedisable: false });
+            this.setState({ nouser: false, updatedisable: false, multidealer: false });
         }
 
         else {
             if (this.state.pin == true) {
-                const i = await list.items.getById(parseInt(this.state.routeindex.Id)).update({
+                //Get State ID
+                const stateId: any[] = await sp.web.lists.getByTitle("StateData").items.select("ID").filter(" website_id eq " + this.state.selectedstate).get();
+                console.log(stateId);
+                //Get District ID
+                const districtId: any[] = await sp.web.lists.getByTitle("DistrictData").items.select("ID").filter(" website_id eq " + this.state.selecteddistrict).get();
+                console.log(districtId);
 
-                    // Title: this.state.plannedvisittime,
-                    PlannedDate: planneddate,
-                    StateId: this.state.selectedstate,
-                    DistrictId: this.state.selecteddistrict,
-                    DealerNameId: this.state.dealername,
-                    ContactNumber: this.state.contactnumber,
-                    Location: this.state.location,
-                    AssignToId: this.state.assignto,
-                    Remarks: this.state.remarks,
-                    Hours: this.state.selectedhour,
-                    Minutes: this.state.selectedmin,
-                    PlannedDateTime: pdt,
-                    Pincode: this.state.pincode,
-                    LocationsId: this.state.locationid,
-                    AssignId: this.state.assign,
-                    Checkin: "1"
 
-                });
-                this.addroute[index] = ({
-                    ViewPlannedDate: planneddateformat,
-                    ViewPlannedTime: plannedtime,
-                    ViewDealerName: dealname,
-                    ViewAssign: assign,
-                    PlannedDate: planneddate,
-                    StateId: this.state.selectedstate,
-                    DistrictId: this.state.selecteddistrict,
-                    DealerNameId: this.state.dealername,
-                    ContactNumber: this.state.contactnumber,
-                    Location: this.state.location,
-                    AssignToId: this.state.assignto,
-                    Remarks: this.state.remarks,
-                    Hour: this.state.selectedhour,
-                    Minute: this.state.selectedmin,
-                    LocationsId: this.state.locationid,
-                    Pincode: this.state.pincode,
-                    ID: this.state.routeindex.Id
+                if (this.state.dealerdataarray.length == 0) { }
+                else {
+                    {
+                        this.state.dealerdataarray.map(async (items) => {
+                            //Update Route
+                            const i = await list.items.getById(parseInt(this.state.routeindex.Id)).update({
 
-                });
-                console.log(this.addroute[index]);
-                this.setState({
-                    selectedstate: "",
-                    selecteddistrict: "",
-                    selectedhour: "",
-                    selectedmin: "",
-                    mandatory: true,
-                    planneddate: this.state.planneddate,
-                    dealername: null,
-                    contactnumber: null,
-                    contactnumbererrormsg: "",
-                    remarks: "",
-                    plannedvisittime: "",
-                    location: "",
-                    assignto: null,
-                    locationid: "",
-                    currentuser: "",
-                    dealertitle: "",
-                    currentuserid: "",
-                    assign: "",
-                    // dealerbusy:true,
-                    nouser: true,
-                    nodealer: true,
-                    nouserdealer: true,
-                    assignname: "",
-                    datedisable: true,
-                    pincode: "",
-                    updatedisable: false
-                });
-                this.setState({
-                    routeindex: {
-                        Id: null,
-                        index: null
+
+                                PlannedDate: planneddate,
+                                StateId: stateId[0].ID,
+                                DistrictId: districtId[0].ID,
+                                DealerNameId: items.dealername,
+                                ContactNumber: items.phonenumber,
+                                Location: items.location,
+                                AssignToId: this.state.assignto,
+                                Remarks: this.state.remarks,
+                                Hours: this.state.selectedhour,
+                                Minutes: this.state.selectedmin,
+                                PlannedDateTime: pdt,
+                                Pincode: items.pincode,
+
+                                AssignId: this.state.assign,
+                                Checkin: "1"
+
+                            });
+                            this.addroute[index] = ({
+                                ViewPlannedDate: planneddateformat,
+                                ViewPlannedTime: plannedtime,
+                                ViewDealerName: items.dealname,
+                                ViewAssign: assign,
+                                PlannedDate: planneddate,
+                                StateId: this.state.selectedstate,
+                                DistrictId: this.state.selecteddistrict,
+                                DealerNameId: items.dealername,
+                                ContactNumber: items.phonenumber,
+                                Location: items.location,
+                                AssignToId: this.state.assignto,
+                                Remarks: this.state.remarks,
+                                Hour: this.state.selectedhour,
+                                Minute: this.state.selectedmin,
+                                LocationsId: this.state.locationid,
+                                Pincode: items.pincode,
+                                ID: this.state.routeindex.Id
+
+                            });
+                            console.log(this.addroute[index]);
+                            if (this.state.hideapprover == false) {
+
+                                this.setState({
+                                    assignto: null,
+                                    assign: "",
+                                    assignname: "",
+                                });
+                            }
+                            this.setState({
+
+                                selectedstate: "",
+                                selecteddistrict: "",
+                                selectedhour: "",
+                                selectedmin: "",
+                                mandatory: true,
+                                planneddate: this.state.planneddate,
+                                dealername: null,
+                                contactnumber: null,
+                                contactnumbererrormsg: "",
+                                remarks: "",
+                                plannedvisittime: "",
+                                location: "",
+
+                                locationid: "",
+                                currentuser: "",
+                                dealertitle: "",
+                                currentuserid: "",
+
+                                nouser: true,
+                                nodealer: true,
+                                nouserdealer: true,
+
+                                pincode: this.state.pincode,
+                                pin: false,
+                                dontknowpin: true,
+                                adddisable: false,
+                                multidealer: true,
+                                dealerdataarray: [],
+                                dealerkey: []
+                            });
+                            this.setState({
+                                routeindex: {
+                                    Id: null,
+                                    index: null
+                                }
+                            });
+                            this.setState({ routedatalist: this.addroute });
+
+                            this.setState({
+
+                                message: "Updated successfully",
+                                isOpenDialog: true,
+                                dialogButton: "Ok"
+
+                            });
+                        })
                     }
-                });
-                this.setState({ routedatalist: this.addroute });
-                alert("Updated successfully");
+                }
+
+
+
             }
+            //With Pincode
             else if (this.state.pin == false) {
-                const i = await list.items.getById(parseInt(this.state.routeindex.Id)).update({
 
-                    // Title: this.state.plannedvisittime,
-                    PlannedDate: planneddate,
-                    StateId: 0,
-                    DistrictId: 0,
-                    DealerNameId: this.state.dealername,
-                    ContactNumber: this.state.contactnumber,
-                    Location: this.state.location,
-                    AssignToId: this.state.assignto,
-                    Remarks: this.state.remarks,
-                    Hours: this.state.selectedhour,
-                    Minutes: this.state.selectedmin,
-                    PlannedDateTime: pdt,
-                    Pincode: this.state.pincode,
-                    LocationsId: this.state.locationid,
-                    AssignId: this.state.assign,
-                    Checkin: "1"
+                if (this.state.dealerdataarray.length == 0) { }
+                else {
+                    {
+                        this.state.dealerdataarray.map(async (items) => {
+                            const i = await list.items.getById(parseInt(this.state.routeindex.Id)).update({
 
-                });
-                this.addroute[index] = ({
-                    ViewPlannedDate: planneddateformat,
-                    ViewPlannedTime: plannedtime,
-                    ViewDealerName: dealname,
-                    ViewAssign: assign,
-                    PlannedDate: planneddate,
-                    StateId: this.state.selectedstate,
-                    DistrictId: this.state.selecteddistrict,
-                    DealerNameId: this.state.dealername,
-                    ContactNumber: this.state.contactnumber,
-                    Location: this.state.location,
-                    AssignToId: this.state.assignto,
-                    Remarks: this.state.remarks,
-                    Hour: this.state.selectedhour,
-                    Minute: this.state.selectedmin,
-                    LocationsId: this.state.locationid,
-                    ID: this.state.routeindex.Id,
-                    Pincode: this.state.pincode,
-                });
-                console.log(this.addroute[index]);
-                this.setState({
-                    selectedstate: "",
-                    selecteddistrict: "",
-                    selectedhour: "",
-                    selectedmin: "",
-                    mandatory: true,
-                    planneddate: this.state.planneddate,
-                    dealername: null,
-                    contactnumber: null,
-                    contactnumbererrormsg: "",
-                    remarks: "",
-                    plannedvisittime: "",
-                    location: "",
-                    assignto: null,
-                    locationid: "",
-                    currentuser: "",
-                    dealertitle: "",
-                    currentuserid: "",
-                    assign: "",
-                    // dealerbusy:true,
-                    nouser: true,
-                    nodealer: true,
-                    nouserdealer: true,
-                    assignname: "",
-                    datedisable: true,
-                    pincode: "",
-                    updatedisable: false
 
-                });
-                this.setState({
-                    routeindex: {
-                        Id: null,
-                        index: null
+                                PlannedDate: planneddate,
+                                StateId: 0,
+                                DistrictId: 0,
+                                DealerNameId: items.dealername,
+                                ContactNumber: items.phonenumber,
+                                Location: items.location,
+                                AssignToId: this.state.assignto,
+                                Remarks: this.state.remarks,
+                                Hours: this.state.selectedhour,
+                                Minutes: this.state.selectedmin,
+                                PlannedDateTime: pdt,
+                                Pincode: items.pincode,
+
+                                AssignId: this.state.assign,
+                                Checkin: "1"
+
+                            });
+                            this.addroute[index] = ({
+                                ViewPlannedDate: planneddateformat,
+                                ViewPlannedTime: plannedtime,
+                                ViewDealerName: items.dealname,
+                                ViewAssign: assign,
+                                PlannedDate: planneddate,
+                                StateId: this.state.selectedstate,
+                                DistrictId: this.state.selecteddistrict,
+                                DealerNameId: items.dealername,
+                                ContactNumber: items.phonenumber,
+                                Location: items.location,
+                                AssignToId: this.state.assignto,
+                                Remarks: this.state.remarks,
+                                Hour: this.state.selectedhour,
+                                Minute: this.state.selectedmin,
+                                LocationsId: this.state.locationid,
+                                ID: this.state.routeindex.Id,
+                                Pincode: items.pincode,
+                            });
+                            console.log(this.addroute[index]);
+                            if (this.state.hideapprover == false) {
+
+                                this.setState({
+                                    assignto: null,
+                                    assign: "",
+                                    assignname: "",
+                                });
+                            }
+                            this.setState({
+
+                                selectedstate: "",
+                                selecteddistrict: "",
+                                selectedhour: "",
+                                selectedmin: "",
+                                mandatory: true,
+                                planneddate: this.state.planneddate,
+                                dealername: null,
+                                contactnumber: null,
+                                contactnumbererrormsg: "",
+                                remarks: "",
+                                plannedvisittime: "",
+                                location: "",
+
+                                locationid: "",
+                                currentuser: "",
+                                dealertitle: "",
+                                currentuserid: "",
+
+                                nouser: true,
+                                nodealer: true,
+                                nouserdealer: true,
+
+                                pincode: this.state.pincode,
+                                pin: false,
+                                dontknowpin: true,
+                                adddisable: false,
+                                dealerdataarray: [],
+                                dealerkey: [],
+                                multidealer: true
+                            });
+                            this.setState({
+                                routeindex: {
+                                    Id: null,
+                                    index: null
+                                }
+                            });
+                            this.setState({
+                                routedatalist: this.addroute,
+                                message: "Updated successfully",
+                                isOpenDialog: true
+                            });
+                        })
                     }
-                });
-                this.setState({ routedatalist: this.addroute });
-                alert("Updated successfully");
+                }
+
             }
         }
     }
+    // Pincode change
     public pinchange = async (ev: React.FormEvent<HTMLInputElement>, pin?: any) => {
         this.setState({
             pincode: pin || '',
             selecteddistrict: "",
             selectedstate: ""
+        });
+        this.setState({
+            mandatory: true,
+            dealerbusy: true,
+            assignbusy: true,
+            nodealer: true,
+            nouser: true,
+            nouserdealer: true,
         });
         let user1 = await sp.web.currentUser();
         this.setState({
@@ -1339,7 +1581,9 @@ export default class CreateRoute extends React.Component<IRouteProps, IRouteStat
         let userid;
         let assign;
         let user;
+        let districtitem;
         let username;
+        let sorted_Dealer = [];
         let extension = /^[0-9]+$/;
         if (pin.match(extension)) {
             this.setState({ pinerrormsg: '' });
@@ -1347,80 +1591,79 @@ export default class CreateRoute extends React.Component<IRouteProps, IRouteStat
             this.setState({ pinerrormsg: 'Please enter a valid number' });
 
         }
-        pin = pin.substring(0, 4);
+        //Get Dealer on basis of pincode
 
-        console.log(pin.trim());
-
-
-        const dealeritems = await sp.web.lists.getByTitle("Dealer List").getItemsByCAMLQuery({
-            ViewXml: "<View><Query><Where><BeginsWith><FieldRef Name='City_x002f_Location_x003a_PinCod' /><Value Type='Lookup'>"
-                + pin + "</Value></BeginsWith></Where></Query></View>",
-        });
-
+        const dealeritems: any[] = await sp.web.lists.getByTitle("DealersData").items.filter(" pin eq " + pin).getAll(5000);
         console.log(dealeritems);
-        for (let i = 0; i < dealeritems.length; i++) {
+        if (dealeritems.length > 0) {
+            for (let i = 0; i < dealeritems.length; i++) {
 
-            let dealer = {
-                key: dealeritems[i].Id,
-                text: dealeritems[i].Title
-            };
+                let dealer = {
+                    value: dealeritems[i].ID,
+                    label: dealeritems[i].dealer_name
+                };
+                districtitem = dealeritems[i].district;
 
-            dealerarray.push(dealer);
-        }
-
-        this.setState({
-            dealeroption: dealerarray
-        });
-        let districtitem;
-        const locationitems = await sp.web.lists.getByTitle("Location").getItemsByCAMLQuery({
-            ViewXml: "<View><Query><Where><BeginsWith><FieldRef Name='PinCode' /><Value Type='Text'>"
-                + pin + "</Value></BeginsWith></Where></Query></View>",
-        });
-        console.log(locationitems);
-        for (let i = 0; i < locationitems.length; i++) {
-            districtitem = locationitems[i].DistrictsId;
-        }
-        this.salesuseritems = await sp.web.lists.getByTitle("Users").items.select("Title,ID,UserNameId").filter(" DistrictId eq " + districtitem).get();
-        for (let i = 0; i < this.salesuseritems.length; i++) {
-
-            user = {
-                key: this.salesuseritems[i].Id,
-                text: this.salesuseritems[i].Title
-            };
-
-            if (assigntoarray.indexOf(user) == -1) {
-                assigntoarray.push(user);
+                dealerarray.push(dealer);
+                sorted_Dealer = _.orderBy(dealerarray, 'text', ['asc']);
             }
 
-            if (this.state.hideapprover == true) {
-                if (this.state.currentuserid == this.salesuseritems[i].UserNameId) {
+            this.setState({
+                dealeroption: sorted_Dealer,
+                nodealer: true
+            });
+
+
+            //Get Assign on basis of pincode
+            this.salesuseritems = await sp.web.lists.getByTitle("Users").items.select("Title,ID,UserNameId,DistrictId").get();
+            console.log("salesusers" + this.salesuseritems);
+
+            let sorted_Assign = [];
+            for (let i = 0; i < this.salesuseritems.length; i++) {
+                if (this.salesuseritems[i].DistrictId == districtitem) {
                     user = {
                         key: this.salesuseritems[i].Id,
                         text: this.salesuseritems[i].Title
                     };
-                    assign = this.salesuseritems[i].UserNameId;
-                    userid = user.key;
-                    username = user.text;
                     assigntoarray.push(user);
+                    sorted_Assign = _.orderBy(assigntoarray, 'text', ['asc']);
                 }
+
+                if (this.state.hideapprover == true) {
+                    if (this.state.currentuserid == this.salesuseritems[i].UserNameId) {
+                        user = {
+                            key: this.salesuseritems[i].Id,
+                            text: this.salesuseritems[i].Title
+                        };
+                        assign = this.salesuseritems[i].UserNameId;
+                        userid = user.key;
+                        username = user.text;
+                        assigntoarray.push(user);
+                        sorted_Assign = _.orderBy(assigntoarray, 'text', ['asc']);
+                    }
+                }
+
             }
 
-
             this.setState({
-                assigntooption: assigntoarray,
+                assigntooption: sorted_Assign,
                 assignto: userid,
                 assign: assign,
-                assignname: username
+                assignname: username,
+                nodealer: true,
+                nouser: true,
+                nouserdealer: true,
 
             });
         }
-        if (this.state.dealeroption.length == 0 && this.state.assigntooption.length == 0) {
+        //Validation
+        else if (dealeritems.length == 0 && this.state.assigntooption.length == 0) {
             this.setState({
                 nouserdealer: false
 
             });
         }
-        else if (this.state.dealeroption.length == 0) {
+        else if (dealeritems.length == 0) {
             this.setState({
                 nodealer: false
 
@@ -1435,24 +1678,47 @@ export default class CreateRoute extends React.Component<IRouteProps, IRouteStat
         else { }
 
     }
+    // No pincode
     public nopin() {
+        console.log(this.state.routeindex.Id);
+        if (this.state.routeindex.Id == null) {
+            this.setState({
+                multidealer: true
+            });
+        }
+        else {
+            this.setState({
+                multidealer: false
+            });
+        }
         this.setState({
             dontknowpin: false,
             pin: true,
             pincode: ""
         });
     }
+    // Pincode
     public knowpin() {
+        console.log(this.state.routeindex.Id);
+        if (this.state.routeindex.Id == null) {
+            this.setState({
+                multidealer: true
+            });
+        }
+        else {
+            this.setState({
+                multidealer: false
+            });
+        }
         this.setState({
             dontknowpin: true,
             pin: false,
             selectedstate: "",
-            selecteddistrict: ""
+            selecteddistrict: "",
+
         });
     }
-    public adddealer(){
-        window.location.href = 'https://mrbutlers.sharepoint.com/sites/SalesOfficerApplication/Lists/DealerList/AllItems.aspx';
-    }
+    // On Cancel
     private _onCancel = () => {
 
 
@@ -1475,16 +1741,99 @@ export default class CreateRoute extends React.Component<IRouteProps, IRouteStat
             nouser: true,
             nodealer: true,
             nouserdealer: true,
-            datedisable: false,
+            // datedisable: false,
             dontknowpin: true,
             pin: false,
             pincode: "",
-            adddisable: false
+            adddisable: false,
+            dealerdataarray: [],
+            dealerkey: []
 
         });
         console.log(this.state.routedatalist);
         this.props.onClose();
+
+        window.location.href = this.state.siteurl + '/SitePages/RouteList.aspx';
+
+
+
     }
+
+    //Confirmation
+    close = () => {
+
+
+        if (this.state.dialogButton == "Confirm") {
+            const i = sp.web.lists.getByTitle("Users").items.getById(this.state.userdataidState).update({
+                Status: "Request Send"
+            });
+            this.setState({
+                dialogButton: "Ok",
+                isOpenDialog: false
+            });
+            this._onCancel();
+
+        }
+        if (this.state.dialogButton == "Delete") {
+
+            this.addroute = this.state.routedatalist;
+            const items = this.addroute.filter(item => item !== this.state.deleteData);
+            this.addroute = items;
+
+            this.setState({ routedatalist: this.addroute });
+            let item = sp.web.lists.getByTitle("Route List").items.getById(this.state.itemId).delete();
+            this.setState({
+                selectedstate: "",
+                selecteddistrict: "",
+                selectedhour: "",
+                selectedmin: "",
+                mandatory: true,
+                planneddate: this.state.planneddate,
+                dealername: null,
+                contactnumber: null,
+                contactnumbererrormsg: "",
+                remarks: "",
+                plannedvisittime: "",
+                location: "",
+                assignto: null,
+                locationid: "",
+                currentuser: "",
+                dealertitle: "",
+                currentuserid: "",
+                assign: "",
+                dealerbusy: true,
+                nouser: true,
+                nodealer: true,
+                nouserdealer: true,
+                assignname: "",
+                pincode: "",
+                dialogButton: "Ok",
+                itemId: '',
+                isOpenDialog: false
+
+            });
+            this.setState({
+                routeindex: {
+                    Id: null,
+                    index: null
+                }
+            });
+
+        }
+
+        if (this.state.dialogButton == "Ok") {
+
+            this.setState({
+                isOpenDialog: false
+
+            });
+
+        }
+
+
+    }
+
+    //Render UI
     public render(): React.ReactElement<IRouteProps> {
         const { firstDayOfWeek } = this.state;
         const hour: IDropdownOption[] = [
@@ -1541,35 +1890,42 @@ export default class CreateRoute extends React.Component<IRouteProps, IRouteStat
         const ErrorIcon: IIconProps = { iconName: "CaretRightSolid8" };
 
         let { isOpen } = this.props;
+      
+
+
+
+
         return (
+
 
             <Panel isOpen={isOpen} type={PanelType.custom}
                 customWidth={'800px'} onDismiss={this._onCancel}  >
 
                 <h3>Create Route</h3>
-                <div hidden={this.state.mandatory}><Label style={{ color: "red" }}>Please fill all mandatory fields</Label></div>
-                <div hidden={this.state.nodealer}><Label style={{ color: "red" }}>No Dealer in this district</Label></div>
-                <div hidden={this.state.nouser}><Label style={{ color: "red" }}>No User in this district </Label></div>
-                <div hidden={this.state.nouserdealer}><Label style={{ color: "red" }}>No Dealer and User in this district </Label></div>
-                <div hidden={this.state.dealerbusy}><Label style={{ color: "red" }}>Dealer has an appointment at the same time.Please choose another </Label></div>
-                <div hidden={this.state.assignbusy}><Label style={{ color: "red" }}>User has an appointment at the same time.Please choose another time </Label></div>
-                <div hidden={this.state.nopin}><Label style={{ color: "red" }}>Please Select District or Enter Pincode </Label></div>
+                <div hidden={this.state.mandatory}><Label style={{ color: "rgb(164, 38, 44)" }}>Please fill all mandatory fields</Label></div>
+                <div hidden={this.state.nodealer}><Label style={{ color: "rgb(164, 38, 44)" }}>No Dealer in this district</Label></div>
+                <div hidden={this.state.nouser}><Label style={{ color: "rgb(164, 38, 44)" }}>No User in this district </Label></div>
+                <div hidden={this.state.nouserdealer}><Label style={{ color: "rgb(164, 38, 44)" }}>No Dealer and User in this district </Label></div>
+                <div hidden={this.state.dealerbusy}><Label style={{ color: "rgb(164, 38, 44)" }}>Dealer has an appointment at the same time.Please choose another </Label></div>
+                <div hidden={this.state.assignbusy}><Label style={{ color: "rgb(164, 38, 44)" }}>User has an appointment at the same time.Please choose another time </Label></div>
+                <div hidden={this.state.nopin}><Label style={{ color: "rgb(164, 38, 44)" }}>Please Select District or Enter Pincode </Label></div>
                 <Label>Planned Date And Time</Label>
-                <table><tr><td>
-                    <DatePicker //style={{ width: '1000px' }}
-                        //className={controlClass.control}
-                        firstDayOfWeek={firstDayOfWeek}
-                        strings={DayPickerStrings}
-                        value={this.state.planneddate}
-                        onSelectDate={this._onplanneddateChange}
-                        placeholder="Select a date..."
-                        ariaLabel="Select a date"
-                        formatDate={(date) => moment(date).format('DD/MM/YYYY')}
-                        isRequired={true}
-                        minDate={new Date()}
-                        disabled={this.state.datedisable}
-                    />
-                </td>
+                <table><tr>
+                    <td>
+                        <DatePicker //style={{ width: '1000px' }}
+                            //className={controlClass.control}
+                            firstDayOfWeek={firstDayOfWeek}
+                            strings={DayPickerStrings}
+                            value={this.state.planneddate}
+                            onSelectDate={this._onplanneddateChange}
+                            placeholder="Select a date..."
+                            ariaLabel="Select a date"
+                            formatDate={(date) => moment(date).format('DD/MM/YYYY')}
+                            isRequired={true}
+                            minDate={new Date()}
+                        // disabled={this.state.datedisable}
+                        />
+                    </td>
 
                     <td>
 
@@ -1594,15 +1950,7 @@ export default class CreateRoute extends React.Component<IRouteProps, IRouteStat
                         /></td>
                 </tr>
                 </table>
-                {/* <TextField
-                    id="time"
-                    label="Planned Visit Time"
-                    type="time"
-                    //defaultValue="07:30"
-                    value={this.state.plannedvisittime}
-                    onChange={this.onplannedvisittimechange}
-                    required={true}
-                /> */}
+               
                 <div hidden={this.state.dontknowpin}>
                     <table><tr><td><Label>Click here if you know pincode</Label></td><td>
                         <IconButton iconProps={ErrorIcon} title="know pincode" ariaLabel="know pincode" onClick={() => this.knowpin()} />
@@ -1632,37 +1980,22 @@ export default class CreateRoute extends React.Component<IRouteProps, IRouteStat
                         errorMessage={this.state.pinerrormsg}
                         required={true}
                         value={this.state.pincode} ></TextField>
+
                     <table><tr><td><Label>Click here if you don't know pincode</Label></td><td>
                         <IconButton iconProps={ErrorIcon} title="Don't know pincode" ariaLabel="Don't know pincode" onClick={() => this.nopin()} />
                     </td>  </tr> </table>
                 </div>
-                <Label >Dealer Name</Label>  <Dropdown id="dealer"
-                    placeholder="Select an option"
-                    selectedKey={this.state.dealername}
+                <Label >Dealer Name</Label>
+       
+
+                <Select
+                    value={this.state.dealerkey}
+                    onChange={this.dealerChanged}
                     options={this.state.dealeroption}
-                    onChanged={this.dealerChanged}
-                    required={true}
-                //onChange={this.deptChanged}
+                    isMulti={this.state.multidealer}
+                // isHidden={this.state.hidemultidealer}
                 />
-                <table><tr><td><Label>Add New Dealer</Label></td><td>
-                        <IconButton iconProps={UpdateIcon} title="Add Dealer" ariaLabel="Add Dealer" onClick={() => this.adddealer()} />
-                    </td>  </tr> </table>
-                {/* <div>
-                    <p><Label >Location</Label>  <Dropdown id="location"
-                        placeholder="Select an option"
-                        selectedKey={this.state.locationid}
-                        options={this.state.locationoption}
-                        disabled
-                    /></p> </div> */}
-                <div > <p><Label >Location </Label>
-                    < TextField value={this.state.location} disabled
-
-                    ></TextField></p> </div>
-                <p><Label >Contact Number </Label>
-                    < TextField value={this.state.contactnumber}
-                        onChange={this._oncontactnumberchange}
-                        errorMessage={this.state.contactnumbererrormsg} required={true}   ></TextField></p>
-
+        
                 <div hidden={this.state.hideapprover} >
                     <p><Label >Assign To</Label>
                         <Dropdown id="assign" required={true}
@@ -1708,10 +2041,6 @@ export default class CreateRoute extends React.Component<IRouteProps, IRouteStat
 
                                         <td style={{ padding: '8px' }}> <IconButton iconProps={DeleteIcon} title="Delete" ariaLabel="Delete" onClick={() => this.DeleteRoutedatalist(item)} /></td>
 
-
-
-
-
                                     </tr>;
                                 })
 
@@ -1723,16 +2052,34 @@ export default class CreateRoute extends React.Component<IRouteProps, IRouteStat
 
                 </div>
 
+
+                <Dialog
+                    isOpen={this.state.isOpenDialog}
+                    type={DialogType.close}
+
+                    onDismiss={() => this.setState({ isOpenDialog: false })}
+                    subText={this.state.message}
+                    isBlocking={false}
+                    closeButtonAriaLabel='Close'
+                >
+
+                    <DialogFooter>
+                        <Button buttonType={ButtonType.primary} onClick={this.close} text={this.state.dialogButton}></Button>
+                    </DialogFooter>
+                </Dialog>
+
+
                 <DialogFooter>
                     {/* <PrimaryButton text="Save" onClick={this.update} /> */}
                     <PrimaryButton text="Close" onClick={this._onCancel} />
+
                 </DialogFooter>
+
+
 
             </Panel>
 
         );
     }
-
-
 
 }

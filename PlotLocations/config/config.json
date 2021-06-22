@@ -9,14 +9,20 @@
           "manifest": "./src/webparts/plotLocations/PlotLocationsWebPart.manifest.json"
         }
       ]
+    },
+    "proposed-route-map-web-part": {
+      "components": [
+        {
+          "entrypoint": "./lib/webparts/proposedRouteMap/ProposedRouteMapWebPart.js",
+          "manifest": "./src/webparts/proposedRouteMap/ProposedRouteMapWebPart.manifest.json"
+        }
+      ]
     }
   },
-  "externals": {
-   
-  },
- 
+  "externals": {},
   "localizedResources": {
     "PlotLocationsWebPartStrings": "lib/webparts/plotLocations/loc/{locale}.js",
-    "ControlStrings": "node_modules/@pnp/spfx-controls-react/lib/loc/{locale}.js"
+    "ControlStrings": "node_modules/@pnp/spfx-controls-react/lib/loc/{locale}.js",
+    "ProposedRouteMapWebPartStrings": "lib/webparts/proposedRouteMap/loc/{locale}.js"
   }
 }

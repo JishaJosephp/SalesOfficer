@@ -2,7 +2,7 @@ import { override } from '@microsoft/decorators';
 import * as React from 'react';
 import * as ReactDom from 'react-dom';
 import { Log } from '@microsoft/sp-core-library';
-import { sp } from "@pnp/sp";
+import { sp,  Web } from '@pnp/sp/presets/all';
 import { assign } from '@uifabric/utilities';
 import * as $ from 'jquery';
 import {
@@ -16,8 +16,10 @@ import { Dialog } from '@microsoft/sp-dialog';
 import CreateRoute from "../components/CreateRoute";
 import EditRoute from "../components/EditRoute";
 import { IRouteProps } from "../components/IRouteProps";
-
+import * as _ from 'lodash';
 import * as strings from 'RouteCommandSetStrings';
+import * as moment from "moment";
+
 
 /**
  * If your command set uses the ClientSideComponentProperties JSON input,
@@ -29,23 +31,33 @@ export interface IRouteCommandSetProperties {
   sampleTextOne: string;
   sampleTextTwo: string;
   sourceRelativeUrl: string;
+  pagerelativeUrl:string;
+  pagerelativeUrl1:string;
 }
+
 
 const LOG_SOURCE: string = 'RouteCommandSet';
 
 export default class RouteCommandSet extends BaseListViewCommandSet<IRouteCommandSetProperties> {
   private panelPlaceHolder: HTMLDivElement = null;
 
+  
+
   @override
   public onInit(): Promise<void> {
+    //Hide command bar
     this.properties.sourceRelativeUrl = "/sites/SalesOfficerApplication/Lists/RouteList";
+    this.properties.pagerelativeUrl = "/sites/SalesOfficerApplication/SitePages/RouteList.aspx";
+    this.properties.pagerelativeUrl1 ="/sites/SalesOfficerApplication/SitePages/AdminRoute.aspx";
     var Libraryurl = this.context.pageContext.list.serverRelativeUrl;
+    let Pageurl = this.context.pageContext.site.serverRequestPath;
     sp.setup({
       spfxContext: this.context
     });
     this.panelPlaceHolder = document.body.appendChild(document.createElement("div"));
     Log.info(LOG_SOURCE, 'Initialized RouteCommandSet');
-    if ((Libraryurl == this.properties.sourceRelativeUrl) ) {
+    if ((Libraryurl == this.properties.sourceRelativeUrl) || (Pageurl == this.properties.pagerelativeUrl)
+    ||(Pageurl == this.properties.pagerelativeUrl1)) {
       
       setInterval(() => {
         $("button[name='New']").hide();
@@ -61,6 +73,8 @@ export default class RouteCommandSet extends BaseListViewCommandSet<IRouteComman
         $("button[name='Alert me']").hide();
         $("button[name='Manage my alerts']").hide();
         $("button[name='Select items']").hide();
+        $("button[name='Export']").hide();
+        $("button[name='Integrate']").hide();
       }, 1);
 
     }
@@ -70,19 +84,22 @@ export default class RouteCommandSet extends BaseListViewCommandSet<IRouteComman
   @override
   public onListViewUpdated(event: IListViewCommandSetListViewUpdatedParameters): void {
     this.properties.sourceRelativeUrl = "/sites/SalesOfficerApplication/Lists/RouteList";
+    this.properties.pagerelativeUrl = "/sites/SalesOfficerApplication/SitePages/RouteList.aspx";
+    this.properties.pagerelativeUrl1 ="/sites/SalesOfficerApplication/SitePages/AdminRoute.aspx";
     var Libraryurl = this.context.pageContext.list.serverRelativeUrl;
+    let Pageurl = this.context.pageContext.site.serverRequestPath;
     const compareOneCommand: Command = this.tryGetCommand('COMMAND_1');
     // if (compareOneCommand) {
     //   // This command should be hidden unless exactly one row is selected.
     //   compareOneCommand.visible = event.selectedRows.length === 1;
     // }
     const compareTwoCommand: Command = this.tryGetCommand('COMMAND_2');
-    compareTwoCommand.visible = (Libraryurl == this.properties.sourceRelativeUrl) ;
+    compareTwoCommand.visible = (Libraryurl == this.properties.sourceRelativeUrl) || (Pageurl == this.properties.pagerelativeUrl)||(Pageurl == this.properties.pagerelativeUrl1);compareOneCommand.visible = ((event.selectedRows.length === 1 && (Pageurl == this.properties.pagerelativeUrl)) || (event.selectedRows.length === 1 && (Libraryurl == this.properties.sourceRelativeUrl)) || (event.selectedRows.length === 1 && (Pageurl == this.properties.pagerelativeUrl1)));
     if (compareOneCommand) {
-      compareOneCommand.visible = ((event.selectedRows.length === 1 && (Libraryurl == this.properties.sourceRelativeUrl)));
+      compareOneCommand.visible = ((event.selectedRows.length === 1 && (Pageurl == this.properties.pagerelativeUrl)) || (event.selectedRows.length === 1 && (Libraryurl == this.properties.sourceRelativeUrl)));
 
     }
-    if ((Libraryurl == this.properties.sourceRelativeUrl) ) {
+    if ((Libraryurl == this.properties.sourceRelativeUrl) || (Pageurl == this.properties.pagerelativeUrl)||(Pageurl == this.properties.pagerelativeUrl1)) {
       setTimeout(() => {
         $("button[name='New']").hide();
         $("button[name='Copy link']").hide();
@@ -97,59 +114,54 @@ export default class RouteCommandSet extends BaseListViewCommandSet<IRouteComman
         $("button[name='Alert me']").hide();
         $("button[name='Manage my alerts']").hide();
         $("button[name='Select items']").hide();
-
+        $("button[name='Export']").hide();
+        $("button[name='Integrate']").hide();
       }, 1);
 
 
     }
   }
+  //Show Panel
   public _showPanel() {
     this._renderPanelComponent({
       isOpen: true,
-       //paneltype: "Small",
        
-      //currentTitle,
-      //itemId,
       listId: this.context.pageContext.list.id.toString(),
       onClose: this._dismissPanel
-      //onClose: this._dismissPanel
+    
     });
   }
+  //Show Edit Panel
   public _showEditPanel() {
     this._renderEditPanelComponent({
       isOpen: true,
-
-      // paneltype: "",
-      //currentTitle,
-      //itemId,
-
-
       listId: this.context.pageContext.list.id.toString(),
       onClose: this._dismissEditPanel
-      //onClose: this._dismissPanel
+      
     });
 
   }
+  //Dismiss show Panel
   private _dismissPanel = () => {
 
     this._renderPanelComponent({ isOpen: false });
   }
+  //Render show panel
   public _renderPanelComponent(props: any) {
     const element: React.ReactElement<IRouteProps> = React.createElement(CreateRoute, assign({
       onClose: null,
       paneltype: "",
     
-      //onClose: null,
-      // currentTitle: null,
-      // itemId: null,
+     
       isOpen: false,
       context: this.context
-      //  listId: null
+      
     }, props));
 
 
     ReactDom.render(element, this.panelPlaceHolder);
   }
+  //Render Edit Panel
   public _renderEditPanelComponent(props: any) {
     const element: React.ReactElement<IRouteProps> = React.createElement(EditRoute, assign({
       onClose: null,
@@ -160,8 +172,301 @@ export default class RouteCommandSet extends BaseListViewCommandSet<IRouteComman
     ReactDom.render(element, this.panelPlaceHolder);
 
   }
+  //Dismiss Edit Panel
   public _dismissEditPanel = () => {
     this._renderEditPanelComponent({ isOpen: false });
+  }
+
+//Sync data from External link
+  public async _syncData() {
+
+    let updatedDate;
+    let stateData=[], districtData=[], dealerData=[];
+    let statefilterData=[], districtFiltered=[], dealerFiltered=[];
+    let stateUpdated, districtUpdated, dealerUpdated, dateListId;
+    let today = new Date();
+    let currentDate = moment(today).format("YYYY-MM-DD");
+    console.log(currentDate);
+
+    const updatedData = await sp.web.lists.getByTitle("SyncData").items.get();
+    console.log(updatedData); 
+ for (let i = 0; i < updatedData.length; i++) {
+      
+      var dateConv = moment(updatedData[i].Date, "YYYY-MM-DDT12:00:00Z").add('days',1);
+      updatedDate = dateConv.format("YYYY-MM-DD");
+      console.log(updatedDate);
+      dateListId=updatedData[i].Id;
+      
+    }
+
+    if(updatedDate === currentDate){
+      console.log("updated");
+      
+  }
+  else{
+  // For State  
+  
+    let stateUrl='https://2uf4bdrqq9.execute-api.ap-south-1.amazonaws.com/dev/getstate';
+    
+    await fetch(stateUrl)  
+    .then((response) => response.json())
+    .then((textResponse) => {
+  stateData=textResponse;
+  
+    })
+    .catch((error) => {
+    console.log(error);
+    });
+
+    statefilterData =stateData.filter((item: any) =>
+    item.date_modified >= updatedDate 
+);
+console.log(statefilterData);
+
+const stateList = await sp.web.lists.getByTitle("StateData").items.get();
+//console.log(stateList); 
+
+if(statefilterData.length != 0)
+{
+
+for (let i = 0; i < statefilterData.length; i++) {
+
+  stateUpdated=0;
+
+  for (let j = 0; j < stateList.length; j++) {
+
+    if(statefilterData[i].id == stateList[j].website_id && statefilterData[i].deleted_status == 1){
+
+      sp.web.lists.getByTitle("StateData").items.getById(stateList[j].Id).update({
+ 
+        Status: "Deleted"
+      });
+     
+
+        stateUpdated=1;
+      
+    }
+    if(statefilterData[i].id == stateList[j].website_id && statefilterData[i].deleted_status == 0){
+     
+     await sp.web.lists.getByTitle("StateData").items.getById(parseInt(stateList[j].Id)).update({
+        Title: statefilterData[i].id+"",
+        website_id: statefilterData[i].id,
+        state: statefilterData[i].state
+      });
+
+      stateUpdated=1;
+    
+  }
+    
+    
+  }
+
+  if(stateUpdated == 0)
+  {
+
+    await sp.web.lists.getByTitle("StateData").items.add({
+      Title: statefilterData[i].id+"",
+      website_id: statefilterData[i].id,
+      state: statefilterData[i].state
+    });
+
+  }
+  
+}
+}
+//For District
+
+let districtUrl='https://2uf4bdrqq9.execute-api.ap-south-1.amazonaws.com/dev/getalldistrict';
+ 
+await fetch(districtUrl)  
+.then((response) => response.json())
+.then((textResponse) => {
+districtData=textResponse;
+
+})
+.catch((error) => {
+console.log(error);
+});
+
+
+districtFiltered =districtData.filter((item: any) =>
+item.date_modified >= updatedDate 
+);
+//console.log(districtFiltered);
+
+
+const districtList = await sp.web.lists.getByTitle("DistrictData").items.getAll(5000);
+console.log(districtList); 
+
+if(districtFiltered.length != 0)
+{
+
+for (let i = 0; i < districtFiltered.length; i++) {
+
+  districtUpdated=0;
+
+  for (let j = 0; j < districtList.length; j++) {
+
+    if(districtFiltered[i].id == districtList[j].website_id && districtFiltered[i].deleted_status == 1){
+
+      sp.web.lists.getByTitle("DistrictData").items.getById(districtList[j].Id).update({
+ 
+        Status: "Deleted"
+      });
+     
+
+      districtUpdated=1;
+      
+    }
+    if(districtFiltered[i].id == districtList[j].website_id && districtFiltered[i].deleted_status == 0){
+     
+     await sp.web.lists.getByTitle("DistrictData").items.getById(districtList[j].Id).update({
+        Title: districtFiltered[i].id+"",
+        website_id: districtFiltered[i].id,
+        district: districtFiltered[i].district,
+        state_id: districtFiltered[i].state_id
+      });
+
+      districtUpdated=1;
+    
+  }
+    
+    
+  }
+
+  if(districtUpdated == 0)
+  {
+
+    await sp.web.lists.getByTitle("DistrictData").items.add({
+      Title: districtFiltered[i].id+"",
+        website_id: districtFiltered[i].id,
+        district: districtFiltered[i].district,
+        state_id: districtFiltered[i].state_id
+    });
+
+  }
+  
+}
+}
+//For Dealer
+let dealerUrl='https://2uf4bdrqq9.execute-api.ap-south-1.amazonaws.com/dev/getalldealers';
+ 
+await fetch(dealerUrl)  
+.then((response) => response.json())
+.then((textResponse) => {
+dealerData=textResponse;
+
+})
+.catch((error) => {
+console.log(error);
+});
+
+dealerFiltered =dealerData.filter((item: any) =>
+item.date_modified >= updatedDate 
+);
+console.log(dealerFiltered);
+
+const dealerList = await sp.web.lists.getByTitle("DealersData").items.getAll(5000);
+
+if(dealerFiltered.length != 0)
+{
+
+for (let i = 0; i < dealerFiltered.length; i++) {
+
+  dealerUpdated=0;
+
+  for (let j = 0; j < dealerList.length; j++) {
+
+    if(dealerFiltered[i].id == dealerList[j].website_id && dealerFiltered[i].deleted_status == 1){
+
+      sp.web.lists.getByTitle("DealersData").items.getById(districtList[j].Id).update({
+ 
+        Status: "Deleted"
+
+      });
+     
+
+      dealerUpdated=1;
+      
+    }
+    if(dealerFiltered[i].id == dealerList[j].website_id && dealerFiltered[i].deleted_status == 0){
+      
+     
+     await sp.web.lists.getByTitle("DealersData").items.getById(dealerList[j].Id).update({
+        Title: dealerFiltered[i].id+"",
+        website_id: dealerFiltered[i].id,
+        district: dealerFiltered[i].district,
+        state: dealerFiltered[i].state,
+        street: dealerFiltered[i].street,
+        landmark: dealerFiltered[i].landmark,
+        pin: dealerFiltered[i].pin+"",
+        dealer_name: dealerFiltered[i].dealer_name,
+        phone: dealerFiltered[i].phone,
+        pdt_sodamaker: dealerFiltered[i].pdt_sodamaker,
+        pdt_refill_cylinder: dealerFiltered[i].pdt_refill_cylinder,
+        pdt_wet_grinder: dealerFiltered[i].pdt_wet_grinder,
+        pdt_copper_bottle: dealerFiltered[i].pdt_copper_bottle,
+        pdt_thermosteel_bottle: dealerFiltered[i].pdt_thermosteel_bottle,
+        pdt_iron_box: dealerFiltered[i].pdt_iron_box,
+        latitude: dealerFiltered[i].latitude,
+        longitude:  dealerFiltered[i].longitude,
+        geo_status:  dealerFiltered[i].geo_status,
+        cookware_skillet:  dealerFiltered[i].cookware_skillet,
+        cookware_tawa:  dealerFiltered[i].cookware_tawa,
+        cookware_kadai:  dealerFiltered[i].cookware_kadai,
+        glass_bottle:  dealerFiltered[i].glass_bottle,
+        knives:  parseInt(dealerFiltered[i].knives)
+
+     });
+
+      dealerUpdated=1;
+    
+  }
+    
+    
+  }
+
+  if(dealerUpdated == 0)
+  {
+
+     await sp.web.lists.getByTitle("DealersData").items.add({
+      Title: dealerFiltered[i].id+"",
+      website_id: dealerFiltered[i].id,
+      district: dealerFiltered[i].district,
+      state: dealerFiltered[i].state,
+      street: dealerFiltered[i].street,
+      landmark: dealerFiltered[i].landmark,
+      pin: dealerFiltered[i].pin+"",
+      dealer_name: dealerFiltered[i].dealer_name,
+      phone: dealerFiltered[i].phone,
+      pdt_sodamaker: dealerFiltered[i].pdt_sodamaker,
+      pdt_refill_cylinder: dealerFiltered[i].pdt_refill_cylinder,
+      pdt_wet_grinder: dealerFiltered[i].pdt_wet_grinder,
+      pdt_copper_bottle: dealerFiltered[i].pdt_copper_bottle,
+      pdt_thermosteel_bottle: dealerFiltered[i].pdt_thermosteel_bottle,
+      pdt_iron_box: dealerFiltered[i].pdt_iron_box,
+      latitude: dealerFiltered[i].latitude,
+      longitude:  dealerFiltered[i].longitude,
+      geo_status:  dealerFiltered[i].geo_status,
+      cookware_skillet:  dealerFiltered[i].cookware_skillet,
+      cookware_tawa:  dealerFiltered[i].cookware_tawa,
+      cookware_kadai:  dealerFiltered[i].cookware_kadai,
+      glass_bottle:  dealerFiltered[i].glass_bottle,
+      knives:  parseInt(dealerFiltered[i].knives)
+     });
+
+  }
+  
+}
+}
+
+await sp.web.lists.getByTitle("SyncData").items.getById(dateListId).update({
+  Date:currentDate
+});
+
+  }
+
+
   }
 
 
@@ -173,7 +478,7 @@ export default class RouteCommandSet extends BaseListViewCommandSet<IRouteComman
     let Dealernamefromlist;
     let contactnumberfromlist;
     let locationfromlist;
-    let locationsfromlist;
+    // let locationsfromlist;
     let assigntofromlist;
     let assignfromlist;
     let remarksfromlist;
@@ -184,48 +489,23 @@ export default class RouteCommandSet extends BaseListViewCommandSet<IRouteComman
     let authornamefromlist;
     let Dealerfromlist;
     let Pincodefromlist;
-    let dealerarray = [];
-    let assigntoarray = [];
+    let districtitem;
     let dontknowpin;
     let pin;
     let statearray = [];
+    let state = [];
     let districtarray = [];
+    let district = [];
+    let dealerarray = [];
+    let dealer =[];
+    let assigntoarray = [];
+    let assignarr =[];
     switch (event.itemId) {
       case 'COMMAND_1':
         if (event.selectedRows.length > 0) {
           event.selectedRows.forEach(async (row: RowAccessor, index: number) => {
             console.log(event);
-
-            if ((row.getValueByName('PlannedDateFormatted')) == "") {
-              PlannedDatefromlist = null;
-            }
-            else {
-              PlannedDatefromlist = new Date(row.getValueByName('PlannedDateFormatted'));
-            }
-            // if ((row.getValueByName('Hours')) == "") {
-            //   Hourfromlist = "";
-            // }
-            // else {
-            //   Hourfromlist = row.getValueByName('Hours');
-            // }
-            // if ((row.getValueByName('Minutes')) == "") {
-            //  Minutefromlist = "";
-            // }
-            // else {
-            //   Minutefromlist = row.getValueByName('Minutes');
-            // }
-            try {
-              Statefromlist = row.getValueByName('State')[0].lookupId;
-            }
-            catch {
-              Statefromlist = null;
-            }
-            try {
-              Districtfromlist = row.getValueByName('District')[0].lookupId;
-            }
-            catch {
-              Districtfromlist = null;
-            }
+//Edit selecting data
             try {
               Dealernamefromlist = row.getValueByName('DealerName')[0].lookupId;
             }
@@ -238,42 +518,7 @@ export default class RouteCommandSet extends BaseListViewCommandSet<IRouteComman
             catch {
               Dealerfromlist = null;
             }
-            if ((row.getValueByName('ContactNumber')) == null) {
-              contactnumberfromlist = null;
-            }
-            else {
-              contactnumberfromlist = row.getValueByName('ContactNumber');
-            }
-            if ((row.getValueByName('Pincode')) == null) {
-              Pincodefromlist = null;
-            }
-            else {
-              Pincodefromlist = row.getValueByName('Pincode');
-            }
-            if ((row.getValueByName('Location')) == null) {
-              locationfromlist = null;
-            }
-            else {
-              locationfromlist = row.getValueByName('Location');
-            }
-            try {
-              locationsfromlist = row.getValueByName('Locations')[0].lookupId;
-            }
-            catch {
-              locationsfromlist = null;
-            }
-            try {
-              assigntofromlist = row.getValueByName('AssignTo')[0].lookupId;
-            }
-            catch {
-              assigntofromlist = null;
-            }
-            try {
-              assignfromlist = row.getValueByName('Assign')[0].lookupId;
-            }
-            catch {
-              assignfromlist = null;
-            }
+            
             try {
               authorfromlist = row.getValueByName('Author')[0].email;
             }
@@ -292,12 +537,7 @@ export default class RouteCommandSet extends BaseListViewCommandSet<IRouteComman
             else {
               PlannedVisitTimefromlist = row.getValueByName('Title');
             }
-            if ((row.getValueByName('Remarks')) == "") {
-              remarksfromlist = "";
-            }
-            else {
-              remarksfromlist = row.getValueByName('Remarks').replace(/(<([^>]+)>)/gi, "");
-            }
+    //Get Route       
             const routeitem =await sp.web.lists.getByTitle("Route List").items.getById(row.getValueByName('ID')).get();
             console.log(routeitem);
             const item = await sp.web.lists.getByTitle("Route List").items.getById(row.getValueByName('ID')).select('Author/Id','Author/EMail','Author/FirstName','Author/LastName').expand('Author').get();
@@ -306,43 +546,64 @@ export default class RouteCommandSet extends BaseListViewCommandSet<IRouteComman
             authornamefromlist =item.Author.FirstName+" "+item.Author.LastName;
      Hourfromlist=routeitem.Hours;
      Minutefromlist=routeitem.Minutes;
+     remarksfromlist=routeitem.Remarks;
+     locationfromlist=routeitem.Location;
+     Pincodefromlist=routeitem.Pincode;
+     contactnumberfromlist=routeitem.ContactNumber;
+     Statefromlist=routeitem.StateId;
+     Districtfromlist=routeitem.DistrictId;
+     assigntofromlist=routeitem.AssignToId;
+     assignfromlist=routeitem.AssignId;
+     PlannedDatefromlist=new Date(routeitem.PlannedDateFormatted);
+
+    // const dealerWebsiteId = await sp.web.lists.getByTitle("DealersData").items.getById(Dealernamefromlist).get();
+
      if(Pincodefromlist == ""||Pincodefromlist == undefined||Pincodefromlist == null){
+
+      
+     const stateWebsiteId = await sp.web.lists.getByTitle("StateData").items.getById(Statefromlist).get();
+     const districtWebsiteId = await sp.web.lists.getByTitle("DistrictData").items.getById(Districtfromlist).get();
+
       dontknowpin= false;
           pin= true;
-          const stateitems: any[] = await sp.web.lists.getByTitle("States").items.select("Title,ID").getAll();
+          //Get state item
+          const stateitems: any[] = await sp.web.lists.getByTitle("StateData").items.select("ID,website_id,state").getAll();
        
         for (let i = 0; i < stateitems.length; i++) {
 
             let statedata = {
-                key: stateitems[i].Id,
-                text: stateitems[i].Title
+                key: stateitems[i].website_id,
+                text: stateitems[i].state
             };
-            statearray.push(statedata);
-
+            state.push(statedata);
+            statearray= _.orderBy(state, 'text', ['asc']);
+            
         }
-        const districtitems: any[] = await sp.web.lists.getByTitle("Districts").items.get();
+        //Get District
+        const districtitems: any[] = await sp.web.lists.getByTitle("DistrictData").items.select("ID,district,website_id").filter(" state_id eq " + stateWebsiteId.website_id).get();
        
         for (let i = 0; i < districtitems.length; i++) {
-            if(districtitems[i].StateId == Statefromlist){
+            
             let districtdata = {
-                key: districtitems[i].Id,
-                text: districtitems[i].Title
+                key: districtitems[i].website_id,
+                text: districtitems[i].district
             };
-            districtarray.push(districtdata);
-        }
-        }
-          const dealeritems: any[] = await sp.web.lists.getByTitle("Dealer List").items.select("Title,ID").filter(" DistrictId eq " + Districtfromlist).get();
+            district.push(districtdata);
+            districtarray= _.orderBy(district, 'text', ['asc']);
+                }
+                const dealeritems: any[] = await sp.web.lists.getByTitle("DealersData").items.select("ID,dealer_name,website_id").filter(" district eq " + districtWebsiteId.website_id).get();
           console.log("dealer" + dealeritems);
           for (let i = 0; i < dealeritems.length; i++) {
 
             let data = {
-              key: dealeritems[i].Id,
-              text: dealeritems[i].Title
+              key: dealeritems[i].ID,
+              text: dealeritems[i].dealer_name
             };
-
-            dealerarray.push(data);
+            dealer.push(data);
+            dealerarray= _.orderBy(dealer, 'text', ['asc']);
           }
-          const salesuseritems: any[] = await sp.web.lists.getByTitle("Users").items.select("Title,ID").filter(" DistrictId eq " + Districtfromlist).get();
+          //Get Assign
+          const salesuseritems: any[] = await sp.web.lists.getByTitle("Users").items.select("Title,ID").filter(" DistrictId eq " + districtWebsiteId.website_id).get();
           console.log("salesusers" + salesuseritems);
           for (let i = 0; i < salesuseritems.length; i++) {
 
@@ -350,40 +611,68 @@ export default class RouteCommandSet extends BaseListViewCommandSet<IRouteComman
               key: salesuseritems[i].Id,
               text: salesuseritems[i].Title
             };
-
-            assigntoarray.push(data);
+assignarr.push(data);
+            assigntoarray= _.orderBy(assignarr, 'text', ['asc']);
           }
+
+          
+          const element: React.ReactElement<IRouteProps> = React.createElement(EditRoute, assign({
+            itemidprops: row.getValueByName('ID'),
+            PlannedDateprops: PlannedDatefromlist,
+            Stateprops:stateWebsiteId.website_id,
+            Districtprops: districtWebsiteId.website_id,
+            DealerNameprops: Dealernamefromlist,
+            ContactNumberprops: contactnumberfromlist,
+            Locationprops: locationfromlist,
+            AssignToprops: assigntofromlist,
+            PlannedVisitTimeprops: PlannedVisitTimefromlist,
+            Remarksprops: remarksfromlist,
+            dealeroptionsprops: dealerarray,
+            assigntooptionprops: assigntoarray,
+            minuteprops:Minutefromlist,
+            hourprops:Hourfromlist,
+            // Locationsprops:locationsfromlist,
+            Authorprops:authorfromlist,
+            Authornameprops:authornamefromlist,
+            Dealerprops:Dealerfromlist,
+            Assignprops:assignfromlist,
+            Pincodeprops:Pincodefromlist,
+            dontknowpinprops:dontknowpin,
+            pinprops:pin,
+            stateoptionprops:statearray,
+            districtoptionprops:districtarray
+          }));
+          ReactDom.render(element, this.panelPlaceHolder);
+
+          this._syncData();
+          this._showEditPanel();
+
+
   }
   else{
+
+ //With Pincode 
+    
+
     dontknowpin= true;
           pin= false;
-       let   pincode = Pincodefromlist.substring(0, 4);
+       let   pincode = Pincodefromlist;
 
-          console.log(pincode.trim());
-          const dealeritems = await sp.web.lists.getByTitle("Dealer List").getItemsByCAMLQuery({
-            ViewXml: "<View><Query><Where><BeginsWith><FieldRef Name='City_x002f_Location_x003a_PinCod' /><Value Type='Lookup'>"
-            + pincode +"</Value></BeginsWith></Where></Query></View>",
-          });
-          
-          console.log(dealeritems);
+      //Get Dealer   
+          const dealeritems: any[] = await sp.web.lists.getByTitle("DealersData").items.filter(" pin eq " + pincode).getAll(5000);
+        console.log(dealeritems);
    for (let i = 0; i < dealeritems.length; i++) {
   
-          let dealer = {
-              key: dealeritems[i].Id,
-              text: dealeritems[i].Title
+          let deal = {
+              key: dealeritems[i].ID,
+              text: dealeritems[i].dealer_name
           };
-          
-          dealerarray.push(dealer);
+          districtitem = dealeritems[i].district;
+          dealer.push(deal);
+          dealerarray= _.orderBy(dealer, 'text', ['asc']);
       }
-      let districtitem;
-      const locationitems = await sp.web.lists.getByTitle("Location").getItemsByCAMLQuery({
-          ViewXml: "<View><Query><Where><BeginsWith><FieldRef Name='PinCode' /><Value Type='Text'>"
-          + pincode +"</Value></BeginsWith></Where></Query></View>",
-        });
-        console.log(locationitems);
-        for (let i = 0; i < locationitems.length; i++) {
-           districtitem = locationitems[i].DistrictsId;
-        }
+      
+     //Get Assign
         const salesuseritems: any[] = await sp.web.lists.getByTitle("Users").items.select("Title,ID").filter(" DistrictId eq " + districtitem).get();
         console.log("salesusers" + salesuseritems);
         for (let i = 0; i < salesuseritems.length; i++) {
@@ -395,42 +684,45 @@ export default class RouteCommandSet extends BaseListViewCommandSet<IRouteComman
 
           assigntoarray.push(data);
         }
+
+        const element: React.ReactElement<IRouteProps> = React.createElement(EditRoute, assign({
+          itemidprops: row.getValueByName('ID'),
+          PlannedDateprops: PlannedDatefromlist,
+          DealerNameprops: Dealernamefromlist,
+          ContactNumberprops: contactnumberfromlist,
+          Locationprops: locationfromlist,
+          AssignToprops: assigntofromlist,
+          PlannedVisitTimeprops: PlannedVisitTimefromlist,
+          Remarksprops: remarksfromlist,
+          dealeroptionsprops: dealerarray,
+          assigntooptionprops: assigntoarray,
+          minuteprops:Minutefromlist,
+          hourprops:Hourfromlist,
+          // Locationsprops:locationsfromlist,
+          Authorprops:authorfromlist,
+          Authornameprops:authornamefromlist,
+          Dealerprops:Dealerfromlist,
+          Assignprops:assignfromlist,
+          Pincodeprops:Pincodefromlist,
+          dontknowpinprops:dontknowpin,
+          pinprops:pin,
+          stateoptionprops:statearray,
+          districtoptionprops:districtarray
+        }));
+        ReactDom.render(element, this.panelPlaceHolder);
+
+        this._syncData();
+        this._showEditPanel();
+
      }
            
-console.log(authorfromlist);
-            const element: React.ReactElement<IRouteProps> = React.createElement(EditRoute, assign({
-              itemidprops: row.getValueByName('ID'),
-              PlannedDateprops: PlannedDatefromlist,
-              Stateprops:Statefromlist,
-              Districtprops: Districtfromlist,
-              DealerNameprops: Dealernamefromlist,
-              ContactNumberprops: contactnumberfromlist,
-              Locationprops: locationfromlist,
-              AssignToprops: assigntofromlist,
-              PlannedVisitTimeprops: PlannedVisitTimefromlist,
-              Remarksprops: remarksfromlist,
-              dealeroptionsprops: dealerarray,
-              assigntooptionprops: assigntoarray,
-              minuteprops:Minutefromlist,
-              hourprops:Hourfromlist,
-              Locationsprops:locationsfromlist,
-              Authorprops:authorfromlist,
-              Authornameprops:authornamefromlist,
-              Dealerprops:Dealerfromlist,
-              Assignprops:assignfromlist,
-              Pincodeprops:Pincodefromlist,
-              dontknowpinprops:dontknowpin,
-              pinprops:pin,
-              stateoptionprops:statearray,
-              districtoptionprops:districtarray
-            }));
-            ReactDom.render(element, this.panelPlaceHolder);
-            this._showEditPanel();
+
           });
         }
 
         break;
       case 'COMMAND_2':
+        this._syncData();
         this._showPanel();
         break;
       default:
