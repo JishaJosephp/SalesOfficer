@@ -14,16 +14,16 @@
   "items": {
     "COMMAND_1": {
       "title": {
-        "default": "Change"
+        "default": "Change/View Route"
       },
-      "iconImageUrl": "icons/request.png",
+     
       "type": "command"
     },
     "COMMAND_2": {
       "title": {
-        "default": "Add"
+        "default": "Create Route"
       },
-      "iconImageUrl": "icons/cancel.png",
+      
       "type": "command"
     }
   }

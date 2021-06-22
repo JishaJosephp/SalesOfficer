@@ -5,7 +5,7 @@ import { ICaptureOrderRequisitionProps } from './ICaptureOrderRequisitionProps';
 import { escape } from '@microsoft/sp-lodash-subset';
 import { IconButton, IIconProps, initializeIcons } from 'office-ui-fabric-react';
 import { Dropdown, DropdownMenuItemType, IDropdownOption, IDropdownProps, IDropdownStyles, } from 'office-ui-fabric-react/lib/Dropdown';
-import { TextField, DatePicker, DayOfWeek, IDatePickerStrings, mergeStyleSets, DefaultButton, Label, PrimaryButton, DialogFooter, Panel, Spinner, SpinnerType, PanelType, IPanelProps } from "office-ui-fabric-react";
+import { TextField, DatePicker, DayOfWeek, IDatePickerStrings, mergeStyleSets, DefaultButton, Label, PrimaryButton, Button, ButtonType, Panel, Spinner, SpinnerType, PanelType, IPanelProps } from "office-ui-fabric-react";
 import { sp } from "@pnp/sp";
 import "@pnp/sp/sites";
 import "@pnp/sp/webs";
@@ -17,6 +17,7 @@ import "@pnp/sp/files";
 import "@pnp/sp/folders";
 import * as moment from 'moment';
 import { IEmailProperties } from '@pnp/sp/sputilities';
+import { Dialog, DialogType, DialogFooter } from 'office-ui-fabric-react/lib/Dialog'
 const DayPickerStrings: IDatePickerStrings = {
   months: [
     'January',
@@ -79,8 +80,10 @@ export interface ICaptureOrderRequisitionState {
   orderindex: IOrderindex;
   Product: any;
   dealer_website_id: any;
+  siteurl: any;
+  isOpen: boolean;
+  DialogeAlertContent: any;
 }
-
 export default class CaptureOrderRequisition extends React.Component<ICaptureOrderRequisitionProps, ICaptureOrderRequisitionState, {}> {
   public constructor(props: ICaptureOrderRequisitionProps, state: ICaptureOrderRequisitionState) {
 
@@ -100,10 +103,11 @@ export default class CaptureOrderRequisition extends React.Component<ICaptureOrd
       orderindex: null,
       Product: "",
       CaptureOrderData: [],
-      dealer_website_id: ''
-
+      dealer_website_id: '',
+      siteurl: '',
+      isOpen: false,
+      DialogeAlertContent: ''
     };
-
     this.cancel = this.cancel.bind(this);
   }
   private captureOrderData: ICaptureOrderData[] = [];
@@ -111,12 +115,22 @@ export default class CaptureOrderRequisition extends React.Component<ICaptureOrd
   private isAdd = "1";
 
   public async componentDidMount() {
+    //Get site url
+    const rootwebData = await sp.site.rootWeb();
+    console.log(rootwebData);
+    var webValue = rootwebData.ResourcePath.DecodedUrl;
+    //alert(webValue);
+    this.setState({
+      siteurl: webValue
+    });
+    //get query string parameter
     var queryParms = new UrlQueryParameterCollection(window.location.href);
     var dealerIdParm = queryParms.getValue("dealerId");
     var routeIdParm = queryParms.getValue("RouteId");
     const dealer_website_id = queryParms.getValue('dealer_website_id');
     this.setState({ dealerid: dealerIdParm, routeid: routeIdParm, dealer_website_id: dealer_website_id });
     let productarray = [];
+    //get product items
     const productitems: any[] = await sp.web.lists.getByTitle("Product").items.select("Title,ID").getAll();
     const orderData = await sp.web.lists.getByTitle("Order List").getItemsByCAMLQuery({
       ViewXml: "<View><Query><Where><And><Eq><FieldRef Name='Route' LookupId='TRUE' /><Value Type='Lookup'>"
@@ -124,7 +138,7 @@ export default class CaptureOrderRequisition extends React.Component<ICaptureOrd
         + dealerIdParm + "</Value></Eq></And></Where></Query></View>",
     });
     console.log(orderData);
-
+    //Bind null value for each product
     for (let i = 0; i < productitems.length; i++) {
       if (orderData.length == 0) {
         this.captureOrderData[i] = ({
@@ -135,8 +149,8 @@ export default class CaptureOrderRequisition extends React.Component<ICaptureOrd
           requireddate: new Date()
 
         });
-
       }
+      //Bind corresponding order data for each product
       else {
         let res = orderData.filter((item) => item.ProductNameId == productitems[i].ID)
         if (res.length > 0) {
@@ -150,17 +164,14 @@ export default class CaptureOrderRequisition extends React.Component<ICaptureOrd
           this.setState({ remarks: res[0].Remarks });
         }
         else {
-
           this.captureOrderData[i] = ({
             productname: productitems[i].Title,
             productid: productitems[i].Id,
             requiredquantity: "",
             ErrorMessage: "",
             requireddate: new Date()
-
           });
         }
-
       }
     }
     this.setState({
@@ -169,11 +180,22 @@ export default class CaptureOrderRequisition extends React.Component<ICaptureOrd
     });
     console.log(this.state.remarks);
   }
+  //Remarks added
   public remarkschange = (ev: React.FormEvent<HTMLInputElement>, remarks?: any) => {
 
     this.setState({ remarks: remarks });
 
   }
+  public timeout(delay: number) {
+    return new Promise(res => setTimeout(res, delay));
+  }
+  open = () => this.setState({ isOpen: true })
+  //ALert close
+  close = () => {
+    this.setState({ isOpen: false, DialogeAlertContent: "" })
+    window.location.href = this.state.siteurl + "/SitePages/Checkin-Checkout.aspx?dealerId=" + this.state.dealerid + "&RouteId=" + this.state.routeid + "&dealer_website_id=" + this.state.dealer_website_id;
+  }
+  //new order method
   public AddData = async () => {
     let batch = sp.web.createBatch();
     let list = sp.web.lists.getByTitle("Order List");
@@ -188,68 +210,66 @@ export default class CaptureOrderRequisition extends React.Component<ICaptureOrd
     console.log(user);
     let fromemail = user.Email;
     let salesofficer = user.Title;
-    let order="";
-    let dealername ="";
+    let order = "";
+    let dealername = "";
     let remark = "";
     let dealerid = parseInt(this.state.dealerid);
     const dealeritems = await sp.web.lists.getByTitle("DealersData").items.getById(dealerid).get();
-      console.log(dealeritems);
-      dealername = dealeritems.dealer_name;
+    console.log(dealeritems);
+    dealername = dealeritems.dealer_name;
+    //Sales head email from settings list for new order mail sending
     const captureHead = await sp.web.lists.getByTitle("Settings List").getItemsByCAMLQuery({
       ViewXml: "<View><Query><Where><Eq><FieldRef Name='ValueType' /><Value Type='Choice'>Capture Order</Value></Eq></Where></Query></View>",
     });
-      headid=captureHead[0].HeadId;
-      const users = await sp.web.siteUsers();
-      for (let i = 0; i < users.length; i++) {
-        if(users[i].Id == headid){
-          
-          captureheademail =users[i].Email;
-          captureheadname = users[i].Title;
-        }
+    headid = captureHead[0].HeadId;
+    const users = await sp.web.siteUsers();
+    for (let i = 0; i < users.length; i++) {
+      if (users[i].Id == headid) {
+
+        captureheademail = users[i].Email;
+        captureheadname = users[i].Title;
       }
-   console.log(this.state.CaptureOrderData);
+    }
+    console.log(this.state.CaptureOrderData);
     for (let i = 0; i < this.state.CaptureOrderData.length; i++) {
       let Requireddate = moment(this.state.CaptureOrderData[i].requireddate, 'DD/MM/YYYY').format("DD MMM YYYY");
       if (this.state.CaptureOrderData[i].requiredquantity != "") {
         await this.upsert(batch, this.state.CaptureOrderData[i].requiredquantity, this.state.CaptureOrderData[i].productid, Requireddate, currentDate, this.state.remarks, this.state.routeid, this.state.dealerid)
         flag = 1;
-        order = order +"<tr><td>"+this.state.CaptureOrderData[i].productname+"</td><td></td><td>"+this.state.CaptureOrderData[i].requiredquantity+"</td><td></td><td>"+Requireddate+"</td></tr>"
-      remark = this.state.remarks;
+        order = order + "<tr><td>" + this.state.CaptureOrderData[i].productname + "</td><td></td><td>" + this.state.CaptureOrderData[i].requiredquantity + "</td><td></td><td>" + Requireddate + "</td></tr>"
+        remark = this.state.remarks;
       }
     }
-    let mailMessage ="<p><table><tr><th>Product Name</th><th></th><th>Quantity</th><th></th><th>Required Date</th></tr>"+order+"</table></p>" ;
-    let MailBody="<p>Hi "+captureheadname+
-    ",</p><p>A new requirement has been purchased from <b>"+dealername+
-    "</b> by "+salesofficer+
-    " on "+currentDate+"</p><p><table><tr><td>Remarks</td><td>:</td><td>"+remark+
-    "</td></tr></table></p><p>"+mailMessage+
-    "</p>";
+    let mailMessage = "<p><table><tr><th>Product Name</th><th></th><th>Quantity</th><th></th><th>Required Date</th></tr>" + order + "</table></p>";
+    let MailBody = "<p>Hi " + captureheadname +
+      ",</p><p>A new requirement has been purchased from <b>" + dealername +
+      "</b> by " + salesofficer +
+      " on " + currentDate + "</p><p><table><tr><td>Remarks</td><td>:</td><td>" + remark +
+      "</td></tr></table></p><p>" + mailMessage +
+      "</p>";
     batch.execute().then(async res => {
+      //Email sent for sales head
       if (flag == 1) {
-        alert("Data Saved Successfully");
-
         const emailProps: IEmailProperties = {
-        From:fromemail,
-        To: [captureheademail],
-        Subject: "Order Information",
-        Body: MailBody,
-        AdditionalHeaders: {
+          From: fromemail,
+          To: [captureheademail],
+          Subject: "Order Information",
+          Body: MailBody,
+          AdditionalHeaders: {
             "content-type": "text/html"
-        }
+          }
         };
-
         await sp.utility.sendEmail(emailProps);
         console.log("Email Sent!");
-        window.location.href = "https://mrbutlers.sharepoint.com/sites/SalesOfficerApplication/SitePages/Checkin-Checkout.aspx?dealerId="+this.state.dealerid+"&RouteId="+this.state.routeid+"&dealer_website_id="+this.state.dealer_website_id;
+        this.setState({ isOpen: true, DialogeAlertContent: "Data Saved Successfully" });
       }
       else {
-        alert("Enter any data");
+        this.setState({ isOpen: true, DialogeAlertContent: "Enter any data" });
       }
     });
-    // await batch.execute();
-    // console.log("Done");
   }
   private OrderData = [];
+  //Quantity change
   public progressplannedchange = (e, i) => {
     this.OrderData = [...this.state.CaptureOrderData];
     if (parseInt(e.target.value) < 0) {
@@ -288,6 +308,7 @@ export default class CaptureOrderRequisition extends React.Component<ICaptureOrd
       this.setState({ CaptureOrderData: this.OrderData });
     }
   }
+  //Get order data of each product
   private getOrders(productname) {
     const orderData = sp.web.lists.getByTitle("Order List").getItemsByCAMLQuery({
       ViewXml: "<View><Query><Where><And><And><Eq><FieldRef Name='Route' LookupId='TRUE' /><Value Type='Lookup'>"
@@ -298,6 +319,7 @@ export default class CaptureOrderRequisition extends React.Component<ICaptureOrd
     console.log(orderData);
     return orderData;
   }
+  //Batch updation
   private async upsert(batch, quantity, productname, Requireddate, currentDate, remarks, routeid, dealerid) {
     const listdata = await this.getOrders(productname);
     if (listdata.length == 0) {
@@ -320,6 +342,7 @@ export default class CaptureOrderRequisition extends React.Component<ICaptureOrd
       });
     }
   }
+  //Object for batch updation
   private createOrderObject(quantity, productname, Requireddate, currentDate, remarks, routeid, dealerid) {
     return {
       Title: quantity,
@@ -331,6 +354,7 @@ export default class CaptureOrderRequisition extends React.Component<ICaptureOrd
       DealerNameId: dealerid
     };
   }
+  //Date change update in order array
   private _onSelectPlannedDate = (e, i) => {
     this.OrderData = [...this.state.CaptureOrderData];
     this.OrderData[i] = ({
@@ -341,8 +365,9 @@ export default class CaptureOrderRequisition extends React.Component<ICaptureOrd
     });
     this.setState({ CaptureOrderData: this.OrderData });
   }
+  //Cancel redirect to checkin page
   public async cancel() {
-    window.location.href = window.location.href = "https://mrbutlers.sharepoint.com/sites/SalesOfficerApplication/SitePages/Checkin-Checkout.aspx?dealerId=" + this.state.dealerid + "&RouteId=" + this.state.routeid + "&checkin=1" + "&dealer_website_id=" + this.state.dealer_website_id;;
+    window.location.href = this.state.siteurl + "/SitePages/Checkin-Checkout.aspx?dealerId=" + this.state.dealerid + "&RouteId=" + this.state.routeid + "&checkin=1" + "&dealer_website_id=" + this.state.dealer_website_id;;
   }
 
   public render(): React.ReactElement<ICaptureOrderRequisitionProps> {
@@ -353,6 +378,7 @@ export default class CaptureOrderRequisition extends React.Component<ICaptureOrd
 
     return (
       <div style={{ minWidth: "100px", maxWidth: "395px" }}>
+        <h2 className={styles.heading}>New Order</h2>
         <table style={{ border: '1px solid #ddd', display: (this.state.CaptureOrderData.length == 0 ? 'none' : 'block'), width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <th style={{ border: '1px solid #ddd', padding: '4px', borderCollapse: 'collapse', textAlign: 'left' }}>Product</th>
@@ -401,8 +427,20 @@ export default class CaptureOrderRequisition extends React.Component<ICaptureOrd
             <td><PrimaryButton id="Cancel" style={{ width: "100px" }} text="Cancel" onClick={this.cancel} /></td>
           </tr>
         </table>
+        <Dialog
+          isOpen={this.state.isOpen}
+          type={DialogType.close}
+          onDismiss={this.close.bind(this)}
 
+          subText={this.state.DialogeAlertContent}
+          isBlocking={false}
+          closeButtonAriaLabel='Close'
+        >
 
+          <DialogFooter>
+            <Button buttonType={ButtonType.primary} onClick={this.close}>OK</Button>
+          </DialogFooter>
+        </Dialog>
 
       </div>
 

@@ -20,7 +20,11 @@
     "@types/jquery": "^3.5.5",
     "jquery": "^3.5.1",
     "jqueryui": "^1.11.1",
-    "moment": "^2.29.1"
+    "moment": "^2.29.1",
+    "react-confirm-alert": "^2.7.0",
+    "react-responsive": "^8.2.0",
+    "react-select": "^4.3.1",
+    "react-select-plus": "^1.0.0-rc.3.patch12"
   },
   "devDependencies": {
     "@microsoft/sp-build-web": "1.11.0",

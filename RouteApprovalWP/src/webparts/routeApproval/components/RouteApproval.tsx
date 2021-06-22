@@ -5,8 +5,9 @@ import * as moment from 'moment';
 import { sp, Web, View, ContentType, Search } from "@pnp/sp/presets/all";
 import { escape } from '@microsoft/sp-lodash-subset';
 import { UrlQueryParameterCollection } from '@microsoft/sp-core-library';
+import { Dialog, DialogType } from 'office-ui-fabric-react/lib/Dialog'
 import { Dropdown, DropdownMenuItemType, IDropdownOption, IDropdownProps, IDropdownStyles, } from 'office-ui-fabric-react/lib/Dropdown';
-import { TextField, DatePicker, DayOfWeek, IDatePickerStrings, mergeStyleSets, DefaultButton, Label, PrimaryButton, DialogFooter, Panel, Spinner, SpinnerType, PanelType, IPanelProps } from "office-ui-fabric-react";
+import { TextField, DatePicker, DayOfWeek, IDatePickerStrings, mergeStyleSets, DefaultButton, Label, PrimaryButton, DialogFooter, Panel, Spinner, SpinnerType, PanelType, IPanelProps, Button, ButtonType } from "office-ui-fabric-react";
 export interface IApprovalState {
   firstDayOfWeek?: DayOfWeek;
   hidebutton: boolean;
@@ -20,8 +21,11 @@ export interface IApprovalState {
   selectedmin: any;
   commentError: any;
   isdisable: boolean;
-
+  siteurl: any;
+  isOpen: boolean;
+  DialogeAlertContent: any;
 }
+//Month Array
 const DayPickerStrings: IDatePickerStrings = {
   months: [
     'January',
@@ -53,6 +57,7 @@ export default class RouteApproval extends React.Component<IRouteApprovalProps, 
   public constructor(props: IRouteApprovalProps, state: IApprovalState) {
 
     super(props);
+    //state initialisation
     this.state = {
       hidebutton: false,
       hideddv: false,
@@ -64,16 +69,35 @@ export default class RouteApproval extends React.Component<IRouteApprovalProps, 
       selectedhour: '',
       selectedmin: '',
       commentError: '',
-      isdisable: false
+      isdisable: false,
+      siteurl: '',
+      isOpen: false,
+      DialogeAlertContent: ''
 
     }
+    //Register submit button
     this.handleSubmitButton = this.handleSubmitButton.bind(this);
   }
 
   private Actionitems: IDropdownOption[] = [];
   public async componentDidMount() {
+    //Get current site url
+    const rootwebData = await sp.site.rootWeb();
+    console.log(rootwebData);
+    var webValue = rootwebData.ResourcePath.DecodedUrl;
+    this.setState({
+      siteurl: webValue
+    });
     await this.BindApprovalForm();
   }
+  //Dialoge open
+  open = () => this.setState({ isOpen: true })
+  //Dialoge close
+  close = () => {
+    this.setState({ isOpen: false, DialogeAlertContent: "" })
+    window.location.href = this.state.siteurl + '/';
+  }
+  //Bind Approval form
   public async BindApprovalForm() {
     var queryParms = new UrlQueryParameterCollection(window.location.href);
     var itemID = queryParms.getValue("ItemID");
@@ -81,11 +105,11 @@ export default class RouteApproval extends React.Component<IRouteApprovalProps, 
     let Name;
     let Status;
     let ExtendedDate;
+    //Get users data
     const items: any = await sp.web.lists.getByTitle("Users").items.get();
-    // const items: any = await sp.web.lists.getByTitle("Users").items.getById(userId).select("Title,Status,ExtendedDate").get();
     console.log(items);
     for (let i = 0; i < items.length; i++) {
-      if(userId == items[i].Id){
+      if (userId == items[i].Id) {
         Name = items[i].Title;
         Status = items[i].Status;
         ExtendedDate = items[i].ExtendedDate;
@@ -100,42 +124,30 @@ export default class RouteApproval extends React.Component<IRouteApprovalProps, 
 
       });
     }
+
     if (Status != "Request Send") {
       this.setState({
-
         Statusvalue: Status,
         isdisable: true
       });
 
       if (ExtendedDate != null) {
         console.log(ExtendedDate);
-        // let ExtendedDate = moment(items.ExtendedDate).format('DD/MM/YYYY');
-        //let dte=new Date(items.ExtendedDate);
-        // var hr;
-        // var min;
         var hours = moment(ExtendedDate).format('HH');
-        // if(hours<10)
-        // hr="0"+hours;
-
-
         var minutes = moment(ExtendedDate).format('mm');
-        // if(minutes<10)
-        // min="0"+minutes;
         this.setState({
-
           planneddate: ExtendedDate,
           selectedmin: minutes,
           selectedhour: hours,
-
         });
-
       }
     }
   }
+  //Submit button click
   public async handleSubmitButton() {
     var queryParms = new UrlQueryParameterCollection(window.location.href);
     var ItemID = queryParms.getValue("ItemID");
-    var ItemIDd = parseInt(ItemID); 
+    var ItemIDd = parseInt(ItemID);
     var ListID = queryParms.getValue("ListID");
     var ListIDd = parseInt(ListID);
 
@@ -159,25 +171,15 @@ export default class RouteApproval extends React.Component<IRouteApprovalProps, 
         Status: this.state.Action,
         ExtendedDate: pdt
       }).then(async i => {
-        // let rWeb = Web("https://mrbutlers.sharepoint.com/sites/TaskManagement/");
-        // const item: any = await rWeb.lists.getByTitle("TaskManagement").items.getById(taskidd).get();
-        // console.log(item);
-        // await rWeb.lists.getByTitle("TaskManagement").items.getById(taskidd).update({
-        // PercentComplete: 1
-        // });
-
       });
       await sp.web.lists.getByTitle("ApprovalList").items.getById(ListIDd).update({
-        Title:"1"
+        Title: "1"
       });
     }
-    alert("Data Saved Successfully");
-
-    window.location.href = 'https://mrbutlers.sharepoint.com/sites/SalesOfficerApplication/';
+    //Open dialogue
+    this.setState({ isOpen: true, DialogeAlertContent: "Data Saved Successfully" });
   }
-
-
-
+  //Date picker change
   public _onplanneddateChange = (date?: Date): void => {
     this.setState({
       planneddate: date,
@@ -185,43 +187,46 @@ export default class RouteApproval extends React.Component<IRouteApprovalProps, 
 
     console.log(this.state.planneddate);
   }
+  //Style change in button hover Submit
   public hover(): void {
-    document.getElementById("b1").style.backgroundColor = "#498205";
-    document.getElementById("b1").style.color = "white";
-  }
-  public nohover(): void {
-    document.getElementById("b1").style.backgroundColor = "white";
+    document.getElementById("b1").style.backgroundColor = "#145cab";
     document.getElementById("b1").style.color = "black";
   }
+  //Style change in button no hover Submit
+  public nohover(): void {
+    document.getElementById("b1").style.backgroundColor = "#145cab";
+    document.getElementById("b1").style.color = "black";
+  }
+  //Hour change
   public hour(option: { key: any; }) {
     console.log(option.key);
     this.setState({
       selectedhour: option.key,
-      // dealerbusy:true
-
     });
-
   }
+  //Min change
   public min(option: { key: any; }) {
     console.log(option.key);
     this.setState({
       selectedmin: option.key,
-      // dealerbusy:true
-
     });
   }
+  //Style change in button hover Cancel
   public hoverr(): void {
-    document.getElementById("b2").style.backgroundColor = "#498205";
-    document.getElementById("b2").style.color = "white";
-  }
-  public nohoverr(): void {
-    document.getElementById("b2").style.backgroundColor = "white";
+    document.getElementById("b2").style.backgroundColor = "#145cab";
     document.getElementById("b2").style.color = "black";
   }
+  //Style change in button no hover Cancel
+  public nohoverr(): void {
+    document.getElementById("b2").style.backgroundColor = "#145cab";
+    document.getElementById("b2").style.color = "black";
+  }
+  //Canecel button redirection to home page
   public handleCancelButton() {
 
-    window.location.href = 'https://mrbutlers.sharepoint.com/sites/SalesOfficerApplication/';
+    window.location.href = this.state.siteurl + '/';
   }
+  //Dropdown Status change 
   private ChangeId = (item: IDropdownOption): void => {
     this.setState({
       Action: item.text,
@@ -231,6 +236,7 @@ export default class RouteApproval extends React.Component<IRouteApprovalProps, 
   }
   public render(): React.ReactElement<IRouteApprovalProps> {
     const { firstDayOfWeek } = this.state;
+    //Time Hour Array
     const hour: IDropdownOption[] = [
 
       { key: '01', text: '01AM' },
@@ -259,6 +265,7 @@ export default class RouteApproval extends React.Component<IRouteApprovalProps, 
       { key: '00', text: '12AM' },
 
     ];
+    //Time Min Array
     const min: IDropdownOption[] = [
 
       { key: '00', text: '00' },
@@ -276,6 +283,7 @@ export default class RouteApproval extends React.Component<IRouteApprovalProps, 
 
 
     ];
+    //Dropdown width style
     const dropdownStyles: Partial<IDropdownStyles> = {
       dropdown: { width: 100 },
     };
@@ -293,8 +301,7 @@ export default class RouteApproval extends React.Component<IRouteApprovalProps, 
                   <label><b>Route Plan Submission Extension Date</b></label>
                 </tr>
                 <tr><td>
-                  <DatePicker //style={{ width: '1000px' }}
-                    //className={controlClass.control}
+                  <DatePicker
                     firstDayOfWeek={firstDayOfWeek}
                     strings={DayPickerStrings}
                     value={this.state.planneddate}
@@ -306,7 +313,6 @@ export default class RouteApproval extends React.Component<IRouteApprovalProps, 
                     disabled={this.state.isdisable}
                   />
                 </td>
-
                   <td>
                     <Dropdown id="time" required={true}
                       placeholder="--"
@@ -343,20 +349,39 @@ export default class RouteApproval extends React.Component<IRouteApprovalProps, 
 
                   </td> </tr>
               </table>
-              <DefaultButton id="b2" style={{ marginTop: '40px', float: "left", marginRight: "10px", backgroundColor: "white", borderRadius: "10px", border: "1px solid gray" }}
+              {/* <DefaultButton id="b2" style={{ marginTop: '40px', float: "left", marginRight: "10px", backgroundColor: "white", borderRadius: "10px", border: "1px solid gray" }}
                 onMouseOver={this.hoverr} onMouseLeave={this.nohoverr}
                 onClick={this.handleSubmitButton} disabled={this.state.isdisable}
               >
+                
                 Submit
-</DefaultButton >
-              <DefaultButton id="b1" style={{ marginTop: '40px', float: "left", backgroundColor: "white", borderRadius: "10px", border: "1px solid gray" }}
+</DefaultButton > */}
+<PrimaryButton text="Submit" id="b2" style={{ marginTop: '40px', float: "left", marginRight: "10px",  borderRadius: "10px", border: "1px solid gray" }}
+                 onClick={this.handleSubmitButton} disabled={this.state.isdisable} />
+              {/* <DefaultButton id="b1" style={{ marginTop: '40px', float: "left", backgroundColor: "white", borderRadius: "10px", border: "1px solid gray" }}
                 onMouseOver={this.hover} onMouseLeave={this.nohover}
                 onClick={this.handleCancelButton}
               >Cancel
-</DefaultButton >
-
+</DefaultButton > */}
+<PrimaryButton text="Cancel" id="b1" style={{ marginTop: '40px', float: "left", borderRadius: "10px", border: "1px solid gray" }}
+              
+                onClick={this.handleCancelButton} />
 
             </div>
+            <Dialog
+              isOpen={this.state.isOpen}
+              type={DialogType.close}
+              onDismiss={this.close.bind(this)}
+
+              subText={this.state.DialogeAlertContent}
+              isBlocking={false}
+              closeButtonAriaLabel='Close'
+            >
+
+              <DialogFooter>
+                <Button buttonType={ButtonType.primary} onClick={this.close}>OK</Button>
+              </DialogFooter>
+            </Dialog>
           </div>
         </div>
       </div>
