@@ -3,8 +3,8 @@
   "port": 4321,
   "https": true,
   "serveConfigurations": {
-    "default": {
-      "pageUrl": "https://ccstechnologies365.sharepoint.com/sites/SalesOfficerApplication/Lists/Users/AdminUsers.aspx",
+    "default": { 
+      "pageUrl": "https://mrbutlers.sharepoint.com/sites/SalesOfficerApplication/Lists/Users/AdminUsers.aspx",
       "customActions": {
         "375f4716-0e8d-4a3c-8d79-ce9929d321aa": {
           "location": "ClientSideExtension.ListViewCommandSet.CommandBar",
@@ -15,8 +15,8 @@
         }
       }
     },
-    "users": {
-      "pageUrl": "https://ccstechnologies365.sharepoint.com/sites/SalesOfficerApplication/Lists/Users/AdminUsers.aspx",
+    "users": { 
+      "pageUrl": "https://mrbutlers.sharepoint.com/sites/SalesOfficerApplication/Lists/Users/AdminUsers.aspx",
       "customActions": {
         "375f4716-0e8d-4a3c-8d79-ce9929d321aa": {
           "location": "ClientSideExtension.ListViewCommandSet.CommandBar",
