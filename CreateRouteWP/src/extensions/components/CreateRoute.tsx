@@ -200,6 +200,7 @@ export default class CreateRoute extends React.Component<IRouteProps, IRouteStat
         this.Addroute = this.Addroute.bind(this);
         this.UpdateRoutedatalist = this.UpdateRoutedatalist.bind(this);
         this.componentDidMount = this.componentDidMount.bind(this);
+        this.close = this.close.bind(this);
     }
 
     //Intialize click
@@ -826,6 +827,7 @@ export default class CreateRoute extends React.Component<IRouteProps, IRouteStat
                 userdataidState: parseInt(userdataid)
 
             });
+            
         }
         //Validation
         else if (assignbusy == "False") {
@@ -1760,10 +1762,15 @@ export default class CreateRoute extends React.Component<IRouteProps, IRouteStat
     }
 
     //Confirmation
-    close = () => {
-
+   public close = () => {
+       
+      
 
         if (this.state.dialogButton == "Confirm") {
+            sp.web.lists.getByTitle("Test").items.add({
+                Text: "Confirm",
+                
+            });
             const i = sp.web.lists.getByTitle("Users").items.getById(this.state.userdataidState).update({
                 Status: "Request Send"
             });
@@ -1775,7 +1782,10 @@ export default class CreateRoute extends React.Component<IRouteProps, IRouteStat
 
         }
         if (this.state.dialogButton == "Delete") {
-
+            sp.web.lists.getByTitle("Test").items.add({
+                Text: "delete",
+                
+            });
             this.addroute = this.state.routedatalist;
             const items = this.addroute.filter(item => item !== this.state.deleteData);
             this.addroute = items;
@@ -1822,7 +1832,10 @@ export default class CreateRoute extends React.Component<IRouteProps, IRouteStat
         }
 
         if (this.state.dialogButton == "Ok") {
-
+            sp.web.lists.getByTitle("Test").items.add({
+                Text: "ok",
+                
+            });
             this.setState({
                 isOpenDialog: false
 
@@ -1832,7 +1845,28 @@ export default class CreateRoute extends React.Component<IRouteProps, IRouteStat
 
 
     }
-
+//    public confirm = () => {
+       
+//         this.setState({
+//             mandatory:false
+//         });
+ 
+//          if (this.state.dialogButton == "Confirm") {
+//              sp.web.lists.getByTitle("Test").items.add({
+//                  Text: "Confirm",
+                 
+//              });
+//              const i = sp.web.lists.getByTitle("Users").items.getById(this.state.userdataidState).update({
+//                  Status: "Request Send"
+//              });
+//              this.setState({
+//                  dialogButton: "Ok",
+//                  isOpenDialog: false
+//              });
+//             //  this._onCancel();
+ 
+//          }
+//         }
     //Render UI
     public render(): React.ReactElement<IRouteProps> {
         const { firstDayOfWeek } = this.state;
@@ -2064,6 +2098,7 @@ export default class CreateRoute extends React.Component<IRouteProps, IRouteStat
                 >
 
                     <DialogFooter>
+                    {/* <Button buttonType={ButtonType.primary} onClick={this.confirm}>Confirm Test</Button> */}
                         <Button buttonType={ButtonType.primary} onClick={this.close} text={this.state.dialogButton}></Button>
                     </DialogFooter>
                 </Dialog>
