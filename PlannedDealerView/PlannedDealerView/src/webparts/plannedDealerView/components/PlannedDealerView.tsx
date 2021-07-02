@@ -182,6 +182,7 @@ export default class PlannedDealerView extends React.Component<IPlannedDealerVie
 
                 }
                 else {
+                  
                   this.setState({ isOpen: true, DialogeAlertContent: "You are already checked into one dealer at this time. Try again after check out" });
                 }
               }
@@ -210,7 +211,10 @@ export default class PlannedDealerView extends React.Component<IPlannedDealerVie
       }
     }
     else {
-      this.setState({ isOpen: true, DialogeAlertContent: "One officer already checked into this dealer at this time. Try again later" });
+      this.setState({ isOpen: true, DialogeAlertContent: "Are you sure to move checkin page?", PageRedirection: "1", urlparameter: "dealerId=" + items[0].DealerNameId + "&RouteId=" + items[0].Id + "&checkin=" + items[0].Checkin + "&dealer_website_id=" + items[0].Minutes });
+     //Commented by Nithya on 28ty june 2021 -> 
+     //For Resolving :- Sales Manager of that district and Sales Officer both can plan to meet a dealer to finalize the deal
+      // this.setState({ isOpen: true, DialogeAlertContent: "One officer already checked into this dealer at this time. Try again later" });
     }
 
     console.log('Selected items:', items);
