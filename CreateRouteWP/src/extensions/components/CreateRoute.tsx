@@ -291,8 +291,6 @@ export default class CreateRoute extends React.Component<IRouteProps, IRouteStat
         let sorted_District = [];
         let filtereddistrict = [];
         for (let i = 0; i < items.length; i++) {
-
-
             let districtdata = {
                 key: items[i].website_id,
                 text: items[i].district
@@ -879,7 +877,7 @@ export default class CreateRoute extends React.Component<IRouteProps, IRouteStat
                                 }
                                 hrcount = hrcount + 1;
                                 let pdt = moment(this.state.planneddate).format('YYYY-MM-DD' + 'T' + addhour + ':' + this.state.selectedmin + ':00');
-                                let notification = this.state.currentuser + " created a route to visit " + this.state.dealertitle + " on "
+                                let notification = this.state.currentuser + " created a route to visit " +  items.dealname + " on "
                                     + planneddateformat + " at " + addhour + ":" + this.state.selectedmin;
                                 let plannedtime = addhour + ":" + this.state.selectedmin;
                                 //Add item
@@ -1020,7 +1018,7 @@ export default class CreateRoute extends React.Component<IRouteProps, IRouteStat
                                 }
                                 hrcount = hrcount + 1;
                                 let pdt = moment(this.state.planneddate).format('YYYY-MM-DD' + 'T' + addhour + ':' + this.state.selectedmin + ':00');
-                                let notification = this.state.currentuser + " created a route to visit " + this.state.dealertitle + " on "
+                                let notification = this.state.currentuser + " created a route to visit " +  items.dealname + " on "
                                     + planneddateformat + " at " + addhour + ":" + this.state.selectedmin;
                                 let plannedtime = addhour + ":" + this.state.selectedmin;
                                 //Add Route

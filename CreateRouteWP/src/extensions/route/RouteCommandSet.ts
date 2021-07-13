@@ -603,7 +603,7 @@ await sp.web.lists.getByTitle("SyncData").items.getById(dateListId).update({
             dealerarray= _.orderBy(dealer, 'text', ['asc']);
           }
           //Get Assign
-          const salesuseritems: any[] = await sp.web.lists.getByTitle("Users").items.select("Title,ID").filter(" DistrictId eq " + districtWebsiteId.website_id).get();
+          const salesuseritems: any[] = await sp.web.lists.getByTitle("Users").items.select("Title,ID").get();
           console.log("salesusers" + salesuseritems);
           for (let i = 0; i < salesuseritems.length; i++) {
 
@@ -615,7 +615,7 @@ assignarr.push(data);
             assigntoarray= _.orderBy(assignarr, 'text', ['asc']);
           }
 
-          
+        console.log(assigntoarray);  
           const element: React.ReactElement<IRouteProps> = React.createElement(EditRoute, assign({
             itemidprops: row.getValueByName('ID'),
             PlannedDateprops: PlannedDatefromlist,
