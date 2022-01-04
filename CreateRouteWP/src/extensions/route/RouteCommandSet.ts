@@ -180,29 +180,39 @@ export default class RouteCommandSet extends BaseListViewCommandSet<IRouteComman
 //Sync data from External link
   public async _syncData() {
 
+
     let updatedDate;
     let stateData=[], districtData=[], dealerData=[];
-    let statefilterData=[], districtFiltered=[], dealerFiltered=[];
+    let statefilterData=[], districtFiltered=[],dealerNotModifiedFiltered=[], dealerFiltered=[];
     let stateUpdated, districtUpdated, dealerUpdated, dateListId;
     let today = new Date();
-    let currentDate = moment(today).format("YYYY-MM-DD");
+    console.log(today);
+    let currentDate = moment(today).format("DD/MM/YYYY HH:mm:00");
     console.log(currentDate);
-
     const updatedData = await sp.web.lists.getByTitle("SyncData").items.get();
     console.log(updatedData); 
- for (let i = 0; i < updatedData.length; i++) {
-      
-      var dateConv = moment(updatedData[i].Date, "YYYY-MM-DDT12:00:00Z").add('days',1);
+    for (let i = 0; i < updatedData.length; i++) {
+      var date = new Date((updatedData[i].Date.toString()).toLocaleString());
+      let listdate = moment(date).format("DD/MM/YYYY HH:mm:00");
+      // var newTime = moment(listdate).subtract({'minutes': 30}).format('hh:mm');
+      // console.log(newTime);
+      var now  = currentDate;
+      var then = listdate;
+      var diff =moment.utc(moment(now,"DD/MM/YYYY HH:mm:ss").diff(moment(then,"DD/MM/YYYY HH:mm:ss"))).format("01/01/2021 HH:mm");
+        console.log(diff);
+        var m = moment(diff);
+var minutes = (m.hour()*60) + m.minute();
+console.log(minutes);
+      var dateConv = moment(updatedData[i].Date, "YYYY-MM-DDTHH:mm:00Z").add('days',1);
       updatedDate = dateConv.format("YYYY-MM-DD");
       console.log(updatedDate);
-      dateListId=updatedData[i].Id;
+        dateListId=updatedData[i].Id;
       
     }
 
-    if(updatedDate === currentDate){
+    if(minutes <= 30){
       console.log("updated");
-      
-  }
+    }
   else{
   // For State  
   
@@ -364,7 +374,13 @@ console.log(error);
 dealerFiltered =dealerData.filter((item: any) =>
 item.date_modified >= updatedDate 
 );
+
+dealerNotModifiedFiltered =dealerData.filter((item: any) =>
+item.date_modified == null 
+);
+
 console.log(dealerFiltered);
+console.log(dealerNotModifiedFiltered);
 
 const dealerList = await sp.web.lists.getByTitle("DealersData").items.getAll(5000);
 
@@ -379,7 +395,7 @@ for (let i = 0; i < dealerFiltered.length; i++) {
 
     if(dealerFiltered[i].id == dealerList[j].website_id && dealerFiltered[i].deleted_status == 1){
 
-      sp.web.lists.getByTitle("DealersData").items.getById(districtList[j].Id).update({
+      sp.web.lists.getByTitle("DealersData").items.getById(dealerList[j].Id).update({
  
         Status: "Deleted"
 
@@ -389,7 +405,7 @@ for (let i = 0; i < dealerFiltered.length; i++) {
       dealerUpdated=1;
       
     }
-    if(dealerFiltered[i].id == dealerList[j].website_id && dealerFiltered[i].deleted_status == 0){
+    if(dealerFiltered[i].id == dealerList[j].website_id && ( dealerFiltered[i].deleted_status == 0  || dealerFiltered[i].deleted_status == null   )){
       
      
      await sp.web.lists.getByTitle("DealersData").items.getById(dealerList[j].Id).update({
@@ -460,8 +476,106 @@ for (let i = 0; i < dealerFiltered.length; i++) {
 }
 }
 
+if(dealerNotModifiedFiltered.length != 0)
+{
+
+for (let i = 0; i < dealerNotModifiedFiltered.length; i++) 
+{
+
+  dealerUpdated=0;
+
+  for (let j = 0; j < dealerList.length; j++)
+   {
+
+    if(dealerNotModifiedFiltered[i].id == dealerList[j].website_id && dealerNotModifiedFiltered[i].deleted_status == 1)
+    {
+
+      sp.web.lists.getByTitle("DealersData").items.getById(dealerList[j].Id).update({
+ 
+        Status: "Deleted"
+
+      });
+     
+
+      dealerUpdated=1;
+      
+    }
+    if(dealerNotModifiedFiltered[i].id == dealerList[j].website_id && (dealerNotModifiedFiltered[i].deleted_status == 0 || dealerNotModifiedFiltered[i].deleted_status == null  ))
+    {    
+     
+     await sp.web.lists.getByTitle("DealersData").items.getById(dealerList[j].Id).update({
+        Title: dealerNotModifiedFiltered[i].id+"",
+        website_id: dealerNotModifiedFiltered[i].id,
+        district: dealerNotModifiedFiltered[i].district,
+        state: dealerNotModifiedFiltered[i].state,
+        street: dealerNotModifiedFiltered[i].street,
+        landmark: dealerNotModifiedFiltered[i].landmark,
+        pin: dealerNotModifiedFiltered[i].pin+"",
+        dealer_name: dealerNotModifiedFiltered[i].dealer_name,
+        phone: dealerNotModifiedFiltered[i].phone,
+        pdt_sodamaker: dealerNotModifiedFiltered[i].pdt_sodamaker,
+        pdt_refill_cylinder: dealerNotModifiedFiltered[i].pdt_refill_cylinder,
+        pdt_wet_grinder: dealerNotModifiedFiltered[i].pdt_wet_grinder,
+        pdt_copper_bottle: dealerNotModifiedFiltered[i].pdt_copper_bottle,
+        pdt_thermosteel_bottle: dealerNotModifiedFiltered[i].pdt_thermosteel_bottle,
+        pdt_iron_box: dealerNotModifiedFiltered[i].pdt_iron_box,
+        latitude: dealerNotModifiedFiltered[i].latitude,
+        longitude:  dealerNotModifiedFiltered[i].longitude,
+        geo_status:  dealerNotModifiedFiltered[i].geo_status,
+        cookware_skillet:  dealerNotModifiedFiltered[i].cookware_skillet,
+        cookware_tawa:  dealerNotModifiedFiltered[i].cookware_tawa,
+        cookware_kadai:  dealerNotModifiedFiltered[i].cookware_kadai,
+        glass_bottle:  dealerNotModifiedFiltered[i].glass_bottle,
+        knives:  parseInt(dealerNotModifiedFiltered[i].knives)
+
+     });
+
+      dealerUpdated=1;
+    
+  }
+    
+    
+  }
+
+  if(dealerUpdated == 0)
+  {
+
+     await sp.web.lists.getByTitle("DealersData").items.add({
+      Title: dealerNotModifiedFiltered[i].id+"",
+      website_id: dealerNotModifiedFiltered[i].id,
+      district: dealerNotModifiedFiltered[i].district,
+      state: dealerNotModifiedFiltered[i].state,
+      street: dealerNotModifiedFiltered[i].street,
+      landmark: dealerNotModifiedFiltered[i].landmark,
+      pin: dealerNotModifiedFiltered[i].pin+"",
+      dealer_name: dealerNotModifiedFiltered[i].dealer_name,
+      phone: dealerNotModifiedFiltered[i].phone,
+      pdt_sodamaker: dealerNotModifiedFiltered[i].pdt_sodamaker,
+      pdt_refill_cylinder: dealerNotModifiedFiltered[i].pdt_refill_cylinder,
+      pdt_wet_grinder: dealerNotModifiedFiltered[i].pdt_wet_grinder,
+      pdt_copper_bottle: dealerNotModifiedFiltered[i].pdt_copper_bottle,
+      pdt_thermosteel_bottle: dealerNotModifiedFiltered[i].pdt_thermosteel_bottle,
+      pdt_iron_box: dealerNotModifiedFiltered[i].pdt_iron_box,
+      latitude: dealerNotModifiedFiltered[i].latitude,
+      longitude:  dealerNotModifiedFiltered[i].longitude,
+      geo_status:  dealerNotModifiedFiltered[i].geo_status,
+      cookware_skillet:  dealerNotModifiedFiltered[i].cookware_skillet,
+      cookware_tawa:  dealerNotModifiedFiltered[i].cookware_tawa,
+      cookware_kadai:  dealerNotModifiedFiltered[i].cookware_kadai,
+      glass_bottle:  dealerNotModifiedFiltered[i].glass_bottle,
+      knives:  parseInt(dealerNotModifiedFiltered[i].knives)
+     });
+
+  }
+  
+}
+}
+
+
+
+
 await sp.web.lists.getByTitle("SyncData").items.getById(dateListId).update({
-  Date:currentDate
+  Date:today,
 });
 
   }
@@ -603,7 +717,7 @@ await sp.web.lists.getByTitle("SyncData").items.getById(dateListId).update({
             dealerarray= _.orderBy(dealer, 'text', ['asc']);
           }
           //Get Assign
-          const salesuseritems: any[] = await sp.web.lists.getByTitle("Users").items.select("Title,ID").get();
+          const salesuseritems: any[] = await sp.web.lists.getByTitle("Users").items.select("Title,ID").filter(" DistrictId eq " + districtWebsiteId.website_id).get();
           console.log("salesusers" + salesuseritems);
           for (let i = 0; i < salesuseritems.length; i++) {
 
@@ -615,7 +729,7 @@ assignarr.push(data);
             assigntoarray= _.orderBy(assignarr, 'text', ['asc']);
           }
 
-        console.log(assigntoarray);  
+          
           const element: React.ReactElement<IRouteProps> = React.createElement(EditRoute, assign({
             itemidprops: row.getValueByName('ID'),
             PlannedDateprops: PlannedDatefromlist,

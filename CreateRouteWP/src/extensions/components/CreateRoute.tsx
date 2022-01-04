@@ -3,8 +3,8 @@ import { IRouteProps } from './IRouteProps';
 // import styles from './CreateRoute.module.scss';
 import { Dropdown, DropdownMenuItemType, IDropdownOption, IDropdownProps, IDropdownStyles } from 'office-ui-fabric-react/lib/Dropdown';
 import {
-    TextField, DatePicker, DayOfWeek, IDatePickerStrings, mergeStyleSets, DefaultButton, Label, PrimaryButton, DialogFooter, Panel, Spinner, SpinnerType, PanelType, IPanelProps,
-    Dialog, DialogType, Button, ButtonType
+    TextField, DatePicker, DayOfWeek, IDatePickerStrings, mergeStyleSets, DefaultButton, Label, PrimaryButton,  Panel, Spinner, SpinnerType, PanelType, IPanelProps,
+     Button, ButtonType
 } from "office-ui-fabric-react";
 import { ChoiceGroup, IChoiceGroupOption } from 'office-ui-fabric-react/lib/ChoiceGroup';
 import { sp } from "@pnp/sp";
@@ -22,15 +22,13 @@ import * as _ from 'lodash';
 import { IconButton, IIconProps, initializeIcons } from 'office-ui-fabric-react';
 import { useMediaQuery } from 'react-responsive';
 import { confirmAlert } from 'react-confirm-alert'; // Import
-
+import {Dialog, DialogType, DialogFooter} from 'office-ui-fabric-react/lib/Dialog'
 import 'react-select-plus/dist/react-select-plus.css';
 import Select from 'react-select';
 
 export interface IRouteindex {
     Id: any;
     index: any;
-
-
 }
 export interface IRouteState {
     firstDayOfWeek?: DayOfWeek;
@@ -86,6 +84,8 @@ export interface IRouteState {
     multiselected: any[];
     dealerkey: any[];
     multidealer: boolean;
+    isOpen:boolean;
+    DialogeAlertContent:any;
 
 }
 const DayPickerStrings: IDatePickerStrings = {
@@ -188,6 +188,8 @@ export default class CreateRoute extends React.Component<IRouteProps, IRouteStat
             multiselected: [],
             dealerkey: [],
             multidealer: true,
+            isOpen:false,
+            DialogeAlertContent:'',
 
         };
         this.dealerChanged = this.dealerChanged.bind(this);
@@ -285,7 +287,7 @@ export default class CreateRoute extends React.Component<IRouteProps, IRouteStat
     public async stateChanged(option: { key: any; text: any }) {
         console.log(option.key);
         this.setState({ selectedstate: option.key });
-        const items: any[] = await sp.web.lists.getByTitle("DistrictData").items.select("ID,district,website_id").filter(" state_id eq " + option.key).get();
+        const items: any[] = await sp.web.lists.getByTitle("DistrictData").items.select("ID,district,website_id").filter(" state_id eq " + option.key).getAll(5000);
         console.log(items);
 
         let sorted_District = [];
@@ -328,7 +330,7 @@ export default class CreateRoute extends React.Component<IRouteProps, IRouteStat
         this.setState({ selecteddistrict: option.key });
         // Filter Dealer based on district
         let sorted_Dealer = [];
-        const dealeritems: any[] = await sp.web.lists.getByTitle("DealersData").items.select("ID,dealer_name,website_id").filter(" district eq " + option.key).get();
+        const dealeritems: any[] = await sp.web.lists.getByTitle("DealersData").items.select("ID,dealer_name,website_id").filter(" district eq " + option.key).getAll(5000);
 
         for (let i = 0; i < dealeritems.length; i++) {
 
@@ -343,10 +345,10 @@ export default class CreateRoute extends React.Component<IRouteProps, IRouteStat
         this.setState({
             dealeroption: sorted_Dealer
         });
-        const useritems: any[] = await sp.web.lists.getByTitle("Users").items.select("Title,ID,UserNameId").filter(" UserType eq 'Sales'").get();
+        const useritems: any[] = await sp.web.lists.getByTitle("Users").items.select("Title,ID,UserNameId").filter(" UserType eq 'Sales'").getAll(5000);
         console.log(useritems);
         //Filter Assign based on district
-        this.salesuseritems = await sp.web.lists.getByTitle("Users").items.select("Title,ID,UserNameId,DistrictId").get();
+        this.salesuseritems = await sp.web.lists.getByTitle("Users").items.select("Title,ID,UserNameId,DistrictId").getAll(5000);
         console.log("salesusers" + this.salesuseritems);
 
         let sorted_Assign = [];
@@ -405,11 +407,9 @@ export default class CreateRoute extends React.Component<IRouteProps, IRouteStat
         else { }
 
     }
-
-
     public async dealerChanged(dealerkey) {
 
-        this.setState({ dealerkey })
+        this.setState({ dealerkey });
 
         console.log(dealerkey.length);
         console.log(dealerkey);
@@ -506,7 +506,7 @@ export default class CreateRoute extends React.Component<IRouteProps, IRouteStat
             });
 
             //Filter dealer
-            const dealeritems: any[] = await sp.web.lists.getByTitle("DealersData").items.select("ID,dealer_name,website_id").filter(" district eq " + item.DistrictId).get();
+            const dealeritems: any[] = await sp.web.lists.getByTitle("DealersData").items.select("ID,dealer_name,website_id").filter(" district eq " + item.DistrictId).getAll(5000);
 
             for (let i = 0; i < dealeritems.length; i++) {
 
@@ -522,10 +522,10 @@ export default class CreateRoute extends React.Component<IRouteProps, IRouteStat
                 dealeroption: sorted_Dealer
             });
             //Filter Assign
-            const useritems: any[] = await sp.web.lists.getByTitle("Users").items.select("Title,ID,UserNameId").filter(" UserType eq 'Sales'").get();
+            const useritems: any[] = await sp.web.lists.getByTitle("Users").items.select("Title,ID,UserNameId").filter(" UserType eq 'Sales'").getAll(5000);
             console.log(useritems);
 
-            this.salesuseritems = await sp.web.lists.getByTitle("Users").items.select("Title,ID,UserNameId,DistrictId").get();
+            this.salesuseritems = await sp.web.lists.getByTitle("Users").items.select("Title,ID,UserNameId,DistrictId").getAll(5000);
             console.log("salesusers" + this.salesuseritems);
 
 
@@ -595,7 +595,7 @@ export default class CreateRoute extends React.Component<IRouteProps, IRouteStat
             });
 
             //Filter Assign
-            this.salesuseritems = await sp.web.lists.getByTitle("Users").items.select("Title,ID,UserNameId,DistrictId").get();
+            this.salesuseritems = await sp.web.lists.getByTitle("Users").items.select("Title,ID,UserNameId,DistrictId").getAll(5000);
             for (let i = 0; i < this.salesuseritems.length; i++) {
                 if (this.salesuseritems[i].DistrictId == districtitem || this.state.currentuserid == this.salesuseritems[i].UserNameId) {
                     user = {
@@ -643,7 +643,7 @@ export default class CreateRoute extends React.Component<IRouteProps, IRouteStat
         multidealeredit[0] = {
             value: item.DealerNameId,
             label: item.ViewDealerName
-        }
+        };
 
         this.setState({ routeindex: routeindex });
         this.setState({
@@ -709,7 +709,7 @@ export default class CreateRoute extends React.Component<IRouteProps, IRouteStat
         let plannedMonth = moment(this.state.planneddate).format('MM');
         //Select Dealers
         for (let j = 0; j < this.state.dealerkey.length; j++) {
-            const dealeritems: any[] = await sp.web.lists.getByTitle("DealersData").items.filter(" ID eq " + this.state.dealerkey[j].value).get();
+            const dealeritems: any[] = await sp.web.lists.getByTitle("DealersData").items.filter(" ID eq " + this.state.dealerkey[j].value).getAll(5000);
             console.log(dealeritems);
 
             ph = dealeritems[0].phone;
@@ -728,7 +728,7 @@ export default class CreateRoute extends React.Component<IRouteProps, IRouteStat
                 "dealname": dealname,
                 "pincode": pin,
                 "dealername": this.state.dealerkey[j].value
-            }
+            };
         }
 
         this.setState({
@@ -818,14 +818,14 @@ export default class CreateRoute extends React.Component<IRouteProps, IRouteStat
         //Validation
         if (addaprv == "approve") {
 
-            this.setState({
-                dialogButton: "Confirm",
-                isOpenDialog: true,
-                message: "You need approval to create route",
-                userdataidState: parseInt(userdataid)
+            // this.setState({
+            //     dialogButton: "Confirm",
+            //     isOpenDialog: true,
+            //     message: "You need approval to create route",
+            //     userdataidState: parseInt(userdataid)
 
-            });
-            
+            // });
+            this.setState({dialogButton: "Confirm",userdataidState: parseInt(userdataid), isOpen: true ,message:"You need approval to create route"}); 
         }
         //Validation
         else if (assignbusy == "False") {
@@ -854,10 +854,10 @@ export default class CreateRoute extends React.Component<IRouteProps, IRouteStat
                     this.setState({ mandatory: false, adddisable: false });
                 }
                 else {
-                    const stateId: any[] = await sp.web.lists.getByTitle("StateData").items.select("ID").filter(" website_id eq " + this.state.selectedstate).get();
+                    const stateId: any[] = await sp.web.lists.getByTitle("StateData").items.select("ID").filter(" website_id eq " + this.state.selectedstate).getAll(5000);
                     console.log(stateId);
 
-                    const districtId: any[] = await sp.web.lists.getByTitle("DistrictData").items.select("ID").filter(" website_id eq " + this.state.selecteddistrict).get();
+                    const districtId: any[] = await sp.web.lists.getByTitle("DistrictData").items.select("ID").filter(" website_id eq " + this.state.selecteddistrict).getAll(5000);
                     console.log(districtId);
                     let hrcount = 0;
                     let addhour;
@@ -985,7 +985,7 @@ export default class CreateRoute extends React.Component<IRouteProps, IRouteStat
 
                                 });
 
-                            })
+                            });
                         }
 
                     }
@@ -1127,7 +1127,7 @@ export default class CreateRoute extends React.Component<IRouteProps, IRouteStat
                                 });
 
 
-                            })
+                            });
                         }
                     }
 
@@ -1141,7 +1141,7 @@ export default class CreateRoute extends React.Component<IRouteProps, IRouteStat
     private async UpdateRoutedatalist() {
         this.setState({ mandatory: true, dealerbusy: true, assignbusy: true, updatedisable: true, multidealer: true, });
         console.log(this.state.routeindex);
-        let dealerid
+        let dealerid;
         console.log(this.state.dealername);
         let assignid = this.state.assignto;
         console.log(this.state.assignto);
@@ -1178,7 +1178,7 @@ export default class CreateRoute extends React.Component<IRouteProps, IRouteStat
             dealerid = this.state.dealerkey[0].value;
         console.log(dealerid);
         //Get dealer data
-        const dealeritems: any[] = await sp.web.lists.getByTitle("DealersData").items.filter(" ID eq " + dealerid).get();
+        const dealeritems: any[] = await sp.web.lists.getByTitle("DealersData").items.filter(" ID eq " + dealerid).getAll(5000);
         console.log(dealeritems);
 
         ph = dealeritems[0].phone;
@@ -1196,7 +1196,7 @@ export default class CreateRoute extends React.Component<IRouteProps, IRouteStat
             "dealname": dealname,
             "pincode": pin,
             "dealername": dealerid
-        }
+        };
         this.setState({
             contactnumber: ph,
             location: loc,
@@ -1286,7 +1286,7 @@ export default class CreateRoute extends React.Component<IRouteProps, IRouteStat
                         for (let i = 0; i < userData.length; i++) {
                             userdataid = userData[i].ID;
                             let extdate = userData[i].ExtendedDate;
-                            console.log(extdate)
+                            console.log(extdate);
                             if (moment(today).isSameOrBefore(extdate)) {
                                 addaprv = "add";
                             }
@@ -1335,10 +1335,10 @@ export default class CreateRoute extends React.Component<IRouteProps, IRouteStat
         else {
             if (this.state.pin == true) {
                 //Get State ID
-                const stateId: any[] = await sp.web.lists.getByTitle("StateData").items.select("ID").filter(" website_id eq " + this.state.selectedstate).get();
+                const stateId: any[] = await sp.web.lists.getByTitle("StateData").items.select("ID").filter(" website_id eq " + this.state.selectedstate).getAll(5000);
                 console.log(stateId);
                 //Get District ID
-                const districtId: any[] = await sp.web.lists.getByTitle("DistrictData").items.select("ID").filter(" website_id eq " + this.state.selecteddistrict).get();
+                const districtId: any[] = await sp.web.lists.getByTitle("DistrictData").items.select("ID").filter(" website_id eq " + this.state.selecteddistrict).getAll(5000);
                 console.log(districtId);
 
 
@@ -1443,7 +1443,7 @@ export default class CreateRoute extends React.Component<IRouteProps, IRouteStat
                                 dialogButton: "Ok"
 
                             });
-                        })
+                        });
                     }
                 }
 
@@ -1548,7 +1548,7 @@ export default class CreateRoute extends React.Component<IRouteProps, IRouteStat
                                 message: "Updated successfully",
                                 isOpenDialog: true
                             });
-                        })
+                        });
                     }
                 }
 
@@ -1615,7 +1615,7 @@ export default class CreateRoute extends React.Component<IRouteProps, IRouteStat
 
 
             //Get Assign on basis of pincode
-            this.salesuseritems = await sp.web.lists.getByTitle("Users").items.select("Title,ID,UserNameId,DistrictId").get();
+            this.salesuseritems = await sp.web.lists.getByTitle("Users").items.select("Title,ID,UserNameId,DistrictId").getAll(5000);
             console.log("salesusers" + this.salesuseritems);
 
             let sorted_Assign = [];
@@ -1760,32 +1760,32 @@ export default class CreateRoute extends React.Component<IRouteProps, IRouteStat
     }
 
     //Confirmation
-   public close = () => {
-       
-      
-
-        if (this.state.dialogButton == "Confirm") {
-            sp.web.lists.getByTitle("Test").items.add({
+   public async close (){
+       console.log("close");
+       console.log(this.state.dialogButton);
+       if (this.state.dialogButton == "Confirm") {
+            await sp.web.lists.getByTitle("Test").items.add({
                 Text: "Confirm",
                 
             });
-            const i = sp.web.lists.getByTitle("Users").items.getById(this.state.userdataidState).update({
+            const i = await sp.web.lists.getByTitle("Users").items.getById(this.state.userdataidState).update({
                 Status: "Request Send"
             });
+            if(i){
             this.setState({
                 dialogButton: "Ok",
                 isOpenDialog: false
             });
             this._onCancel();
-
+            }
         }
         if (this.state.dialogButton == "Delete") {
-            sp.web.lists.getByTitle("Test").items.add({
+           await sp.web.lists.getByTitle("Test").items.add({
                 Text: "delete",
                 
             });
             this.addroute = this.state.routedatalist;
-            const items = this.addroute.filter(item => item !== this.state.deleteData);
+            const items = await this.addroute.filter(item => item !== this.state.deleteData);
             this.addroute = items;
 
             this.setState({ routedatalist: this.addroute });
@@ -1832,11 +1832,9 @@ export default class CreateRoute extends React.Component<IRouteProps, IRouteStat
         if (this.state.dialogButton == "Ok") {
             sp.web.lists.getByTitle("Test").items.add({
                 Text: "ok",
-                
             });
             this.setState({
                 isOpenDialog: false
-
             });
 
         }
@@ -2084,8 +2082,16 @@ export default class CreateRoute extends React.Component<IRouteProps, IRouteStat
 
                 </div>
 
-
                 <Dialog
+          isOpen={this.state.isOpen}
+          type={DialogType.close}
+          // onDismiss={this.closeButton.bind(this)}
+          onDismiss={() => this.setState({ isOpen: false })}
+          subText={this.state.message}
+          isBlocking={false}
+          closeButtonAriaLabel='Close'
+        >
+                {/* <Dialog
                     isOpen={this.state.isOpenDialog}
                     type={DialogType.close}
 
@@ -2093,7 +2099,7 @@ export default class CreateRoute extends React.Component<IRouteProps, IRouteStat
                     subText={this.state.message}
                     isBlocking={false}
                     closeButtonAriaLabel='Close'
-                >
+                > */}
 
                     <DialogFooter>
                     {/* <Button buttonType={ButtonType.primary} onClick={this.confirm}>Confirm Test</Button> */}
