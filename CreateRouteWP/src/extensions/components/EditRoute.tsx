@@ -325,23 +325,23 @@ export default class EditRoute extends React.Component<IRouteProps, IRouteState>
             let dealer = [];
             pin = this.state.pincode;
             //Get Dealer
-            const dealeritems: any[] = await sp.web.lists.getByTitle("DealersData").items.filter(" pin eq " + pin).getAll(5000);
-            console.log(dealeritems);
-            for (let i = 0; i < dealeritems.length; i++) {
+            // const dealeritems: any[] = await sp.web.lists.getByTitle("DealersData").items.filter(" pin eq " + pin).getAll(5000);
+            // console.log(dealeritems);
+            // for (let i = 0; i < dealeritems.length; i++) {
 
-                let deal = {
-                    key: dealeritems[i].ID,
-                    text: dealeritems[i].dealer_name
-                };
-                districtitem = dealeritems[i].district;
-                dealer.push(deal);
-                dealerarray = _.orderBy(dealer, 'text', ['asc']);
-            }
+            //     let deal = {
+            //         key: dealeritems[i].ID,
+            //         text: dealeritems[i].dealer_name
+            //     };
+            //     districtitem = dealeritems[i].district;
+            //     dealer.push(deal);
+            //     dealerarray = _.orderBy(dealer, 'text', ['asc']);
+            // }
 
 
-            this.setState({
-                dealeroption: dealerarray
-            });
+            // this.setState({
+            //     dealeroption: dealerarray
+            // });
 
 
 

@@ -12,9 +12,9 @@ import GridListTileBar from '@material-ui/core/GridListTileBar';
 import ListSubheader from '@material-ui/core/ListSubheader';
 import { colors } from '@material-ui/core';
 import { confirmAlert } from 'react-confirm-alert'; // Import
-import { Dialog, DialogType, DialogFooter } from 'office-ui-fabric-react/lib/Dialog'
+import { Dialog, DialogType, DialogFooter } from 'office-ui-fabric-react/lib/Dialog';
 
-import 'react-confirm-alert/src/react-confirm-alert.css'
+import 'react-confirm-alert/src/react-confirm-alert.css';
 import {
   DatePicker,
   mergeStyleSets,
@@ -131,7 +131,7 @@ export default class PlannedDealerView extends React.Component<IPlannedDealerVie
     const checkinData = await sp.web.lists.getByTitle("CheckIn CheckOut").getItemsByCAMLQuery({
       ViewXml: "<View><Query><Where><And><And><Neq><FieldRef Name='UserName' /><Value Type='Person or Group'>"
         + this.state.user + "</Value></Neq><Eq><FieldRef Name='DealerName' LookupId='TRUE' /><Value Type='Lookup'>"
-        + items[0].DealerNameId + "</Value></Eq></And><Eq><FieldRef Name='LogType' /> <Value Type='Choice'>Check In</Value></Eq></And></Where></Query></View>",
+        + items[0].DealerNameId + "</Value></Eq></And><Eq><FieldRef Name='LogType' /> <Value Type='Choice'>Check In</Value></Eq></And><RowLimit>5000</RowLimit></Where></Query></View>",
     });
     console.log(checkinData);
 
@@ -152,7 +152,7 @@ export default class PlannedDealerView extends React.Component<IPlannedDealerVie
         ViewXml: "<View><Query><Where><And><And><Eq><FieldRef Name='Assign' /><Value Type='Person or Group'>"
           + this.state.user + "</Value></Eq><Eq><FieldRef Name='PlannedDate' /><Value Type='DateTime'>"
           + currentDates + "</Value></Eq></And><Eq><FieldRef Name='DealerName' LookupId='TRUE' /><Value Type='Lookup'>"
-          + items[0].DealerNameId + "</Value></Eq></And></Where></Query></View>",
+          + items[0].DealerNameId + "</Value></Eq></And></Where><RowLimit>5000</RowLimit></Query></View>",
       });
       console.log(plannedData);
       if (planneddate == currentDate) {
@@ -162,7 +162,7 @@ export default class PlannedDealerView extends React.Component<IPlannedDealerVie
               if (items[0].Id == plannedData[i].ID) {
                 const checkinDatas = await sp.web.lists.getByTitle("CheckIn CheckOut").getItemsByCAMLQuery({
                   ViewXml: "<View><Query><Where><And><Eq><FieldRef Name='UserName' /><Value Type='Person or Group'>"
-                    + this.state.user + "</Value></Eq><Eq><FieldRef Name='LogType' /> <Value Type='Choice'>Check In</Value></Eq></And></Where></Query></View>",
+                    + this.state.user + "</Value></Eq><Eq><FieldRef Name='LogType' /> <Value Type='Choice'>Check In</Value></Eq></And></Where><RowLimit>5000</RowLimit></Query></View>",
                 });
                 console.log(checkinDatas);
                 if (checkinDatas.length > 0) {
@@ -223,13 +223,13 @@ export default class PlannedDealerView extends React.Component<IPlannedDealerVie
   private SelectDate = (date?: Date): void => {
     this.setState({ SelectDate: date });
   };
-  open = () => this.setState({ isOpen: true })
+  open = () => this.setState({ isOpen: true });
   //Close dialogue
   close = () => {
     if (this.state.PageRedirection == "1") {
       window.location.href = this.state.siteurl + "/SitePages/Checkin-Checkout.aspx?" + this.state.urlparameter;
     }
-    this.setState({ isOpen: false, DialogeAlertContent: "", PageRedirection: "0" })
+    this.setState({ isOpen: false, DialogeAlertContent: "", PageRedirection: "0" });
   }
   //Get route details
   public async getDetails() {
@@ -247,7 +247,7 @@ export default class PlannedDealerView extends React.Component<IPlannedDealerVie
     const plannedData = await sp.web.lists.getByTitle("Route List").getItemsByCAMLQuery({
       ViewXml: "<View><Query><Where><And><Geq><FieldRef Name='PlannedDate' /><Value Type='DateTime'>"
         + currentDate + "</Value></Geq> <Eq><FieldRef Name='Assign' /><Value Type='Person or Group'>"
-        + this.state.user + "</Value></Eq> </And></Where><OrderBy><FieldRef Name='PlannedTime'/></OrderBy></Query></View>",
+        + this.state.user + "</Value></Eq> </And></Where><OrderBy><FieldRef Name='PlannedTime'/></OrderBy><RowLimit>5000</RowLimit></Query></View>",
     });
     console.log(plannedData);
     //Get dealer data

@@ -8,21 +8,23 @@ import { ReactBingmaps } from 'react-bingmaps';
 import 'bingmaps';
 import {
   DatePicker
+
 } from "office-ui-fabric-react";
-import { sp, Web } from '@pnp/sp/presets/all';
+import { sp,  Web } from '@pnp/sp/presets/all';
 import * as moment from "moment";
+
 export interface IProposedRouteMapState {
 
   user                : any;
   userid              : any;
-  center              : any[];
   siteurl             : string;
+  center              : any[];
   selectedDate        : any;
   locationCoordinates : any[];
-
+ 
 }
 
-export default class ProposedRouteMap extends React.Component<IProposedRouteMapProps, IProposedRouteMapState, any> {
+export default class ProposedRouteMap extends React.Component<IProposedRouteMapProps,IProposedRouteMapState, any> {
 
   constructor(props: IProposedRouteMapProps) {
 

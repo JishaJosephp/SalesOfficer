@@ -224,11 +224,12 @@ export default class CheckinCheckout extends React.Component<ICheckinCheckoutPro
   }
   
   }
-    if(search.length != 0 && isCheckin){
-      this.setState({ isOpen: true ,DialogeAlertContent:"Sales Officer already checkin to this dealer now. Please try after some time"});
+    // if(search.length != 0 && isCheckin){
+    //   this.setState({ isOpen: true ,DialogeAlertContent:"Sales Officer already checkin to this dealer now. Please try after some time"});
       
-    }
-     else if ( this.state.dealername == ""){
+    // }
+    //  else
+      if ( this.state.dealername == ""){
             this.setState({ mandatory: false });  
         }
         else{
