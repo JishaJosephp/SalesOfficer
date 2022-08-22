@@ -119,6 +119,8 @@ export default class PlannedDealerView extends React.Component<IPlannedDealerVie
   //Selection change of dealer item
   private async _getSelection(items: any[]) {
     console.log(items);
+    let checkinData = [];
+    let checkinDatas = [];
     let isCheckin = false;
     let isCheckins = false;
     let currentDate = moment(new Date()).format("YYYY-MM-DD");
@@ -128,15 +130,22 @@ export default class PlannedDealerView extends React.Component<IPlannedDealerVie
     console.log(this.state.user);
 
     //already check into this dealer
-    const checkinData = await sp.web.lists.getByTitle("CheckIn CheckOut").getItemsByCAMLQuery({
-      ViewXml: "<View><Query><Where><And><And><Neq><FieldRef Name='UserName' /><Value Type='Person or Group'>"
-        + this.state.user + "</Value></Neq><Eq><FieldRef Name='DealerName' LookupId='TRUE' /><Value Type='Lookup'>"
-        + items[0].DealerNameId + "</Value></Eq></And><Eq><FieldRef Name='LogType' /> <Value Type='Choice'>Check In</Value></Eq></And><RowLimit>5000</RowLimit></Where></Query></View>",
-    });
+    let listItemsResult = await sp.web.lists.getByTitle("CheckIn CheckOut")
+    .items.top(4000).getPaged();
+     checkinData = listItemsResult.results;
+  while (listItemsResult.hasNext) {
+    listItemsResult = await listItemsResult.getNext();
+    checkinData.push(...(listItemsResult.results));      
+}
+    // const checkinData = await sp.web.lists.getByTitle("CheckIn CheckOut").getItemsByCAMLQuery({
+    //   ViewXml: "<View><Query><Where><And><And><Neq><FieldRef Name='UserName' /><Value Type='Person or Group'>"
+    //     + this.state.user + "</Value></Neq><Eq><FieldRef Name='DealerName' LookupId='TRUE' /><Value Type='Lookup'>"
+    //     + items[0].DealerNameId + "</Value></Eq></And><Eq><FieldRef Name='LogType' /><Value Type='Choice'>Check In</Value></Eq></And><RowLimit>5000</RowLimit></Where></Query></View>",
+    // });
     console.log(checkinData);
-
     if (checkinData.length > 0) {
       for (let i = 0; i < checkinData.length; i++) {
+        if(checkinData[i].DealerNameId == items[0].DealerNameId && checkinData[i].LogType == "Check In" && checkinData[i].UserNameId!=this.state.user ){
         let item = checkinData[i];
         let checkin = item.Checkin;
         let checkinDate = moment(checkin).format("YYYY-MM-DD");
@@ -144,7 +153,7 @@ export default class PlannedDealerView extends React.Component<IPlannedDealerVie
           isCheckin = true;
         }
       }
-
+    }
     }
     if (checkinData.length == 0 || !isCheckin) {
       //already this user checkin to any other dealer
@@ -160,13 +169,21 @@ export default class PlannedDealerView extends React.Component<IPlannedDealerVie
           if (items[0].Checkin == "1") {
             for (let i = 0; i < plannedData.length; i++) {
               if (items[0].Id == plannedData[i].ID) {
-                const checkinDatas = await sp.web.lists.getByTitle("CheckIn CheckOut").getItemsByCAMLQuery({
-                  ViewXml: "<View><Query><Where><And><Eq><FieldRef Name='UserName' /><Value Type='Person or Group'>"
-                    + this.state.user + "</Value></Eq><Eq><FieldRef Name='LogType' /> <Value Type='Choice'>Check In</Value></Eq></And></Where><RowLimit>5000</RowLimit></Query></View>",
-                });
+                let listItemsResult = await sp.web.lists.getByTitle("CheckIn CheckOut")
+    .items.top(4000).getPaged();
+    checkinDatas = listItemsResult.results;
+  while (listItemsResult.hasNext) {
+    listItemsResult = await listItemsResult.getNext();
+    checkinDatas.push(...(listItemsResult.results));      
+}
+                // const checkinDatas = await sp.web.lists.getByTitle("CheckIn CheckOut").getItemsByCAMLQuery({
+                //   ViewXml: "<View><Query><Where><And><Eq><FieldRef Name='UserName' /><Value Type='Person or Group'>"
+                //     + this.state.user + "</Value></Eq><Eq><FieldRef Name='LogType' /> <Value Type='Choice'>Check In</Value></Eq></And></Where><RowLimit>5000</RowLimit></Query></View>",
+                // });
                 console.log(checkinDatas);
                 if (checkinDatas.length > 0) {
                   for (let i = 0; i < checkinDatas.length; i++) {
+                    if(checkinData[i].LogType == "Check In" && checkinData[i].UserNameId!=this.state.user){
                     let item = checkinDatas[i];
                     let checkins = item.Checkin;
                     let checkinDates = moment(checkins).format("YYYY-MM-DD");
@@ -174,6 +191,7 @@ export default class PlannedDealerView extends React.Component<IPlannedDealerVie
                       isCheckins = true;
 
                     }
+                  }
                   }
                 }
                 if (checkinDatas.length == 0 || !isCheckins) {
